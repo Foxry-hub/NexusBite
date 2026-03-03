@@ -1,0 +1,95 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+}
+
+// ==================== ENUMS ====================
+
+enum Role {
+  ADMIN
+  USER
+}
+
+enum MenuStatus {
+  AVAILABLE
+  OUT_OF_STOCK
+}
+
+enum PickupTime {
+  BREAK_1
+  BREAK_2
+}
+
+enum OrderStatus {
+  PENDING
+  PREPARING
+  READY
+  COMPLETED
+}
+
+// ==================== MODELS ====================
+
+model User {
+  id        String   @id @default(cuid())
+  name      String
+  email     String   @unique
+  role      Role     @default(USER)
+  balance   Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  orders Order[]
+
+  @@map("users")
+}
+
+model Menu {
+  id          String     @id @default(cuid())
+  name        String
+  description String     @db.Text
+  price       Int
+  image       String?    @db.LongText
+  status      MenuStatus @default(AVAILABLE)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  orderItems OrderItem[]
+
+  @@map("menus")
+}
+
+model Order {
+  id          String      @id @default(cuid())
+  userId      String
+  totalAmount Int
+  pickupTime  PickupTime
+  status      OrderStatus @default(PENDING)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  user  User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items OrderItem[]
+
+  @@index([userId])
+  @@map("orders")
+}
+
+model OrderItem {
+  id       String @id @default(cuid())
+  orderId  String
+  menuId   String
+  quantity Int
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  menu  Menu  @relation(fields: [menuId], references: [id], onDelete: Restrict)
+
+  @@index([orderId])
+  @@index([menuId])
+  @@map("order_items")
+}

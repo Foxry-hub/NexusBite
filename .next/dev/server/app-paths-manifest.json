@@ -1,0 +1,4 @@
+{
+  "/admin/menu/page": "app/admin/menu/page.js",
+  "/api/admin/menu/route": "app/api/admin/menu/route.js"
+}
