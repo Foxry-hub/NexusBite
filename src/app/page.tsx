@@ -13,6 +13,8 @@ import {
   MapPin,
 } from "lucide-react";
 import Image from "next/image";
+import { redirect } from "next/navigation";
+import { getSessionUser } from "@/lib/auth";
 
 // Data menu trending
 const trendingMenus = [
@@ -75,7 +77,20 @@ function formatPrice(price: number) {
   }).format(price);
 }
 
-export default function Home() {
+export default async function Home() {
+  // Check if user is authenticated - redirect to their dashboard
+  const user = await getSessionUser();
+  if (user) {
+    switch (user.role) {
+      case "SISWA":
+        redirect("/dashboard/siswa");
+      case "PENJUAL":
+        redirect("/dashboard/penjual");
+      case "ADMIN":
+        redirect("/admin/menu");
+    }
+  }
+
   return (
     <div className="min-h-screen bg-slate-950 text-white">
       {/* Navigation */}

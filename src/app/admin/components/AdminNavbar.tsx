@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter, usePathname } from "next/navigation";
-import { LogOut, UtensilsCrossed, Users } from "lucide-react";
+import { LogOut, UtensilsCrossed, Users, Wallet, BarChart3 } from "lucide-react";
 import { useState } from "react";
 import Link from "next/link";
 
@@ -34,7 +34,9 @@ export default function AdminNavbar({ userName }: { userName: string }) {
 
   const navLinks = [
     { href: "/admin/menu", label: "Menu", icon: UtensilsCrossed },
-    { href: "/admin/users", label: "Penjual", icon: Users },
+    { href: "/admin/users", label: "Verifikasi Penjual", icon: Users },
+    { href: "/admin/balance", label: "Top-Up Saldo", icon: Wallet },
+    { href: "/admin/reports", label: "Laporan", icon: BarChart3 },
   ];
 
   return (

@@ -43,11 +43,11 @@ export function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // For login page, redirect authenticated users to their dashboard
+  // For login page, redirect authenticated users to home (which will check role and redirect to dashboard)
   if (pathname === "/login" && sessionCookie) {
     const session = decodeSession(sessionCookie);
     if (session && session.expiresAt > Date.now()) {
-      // User is already logged in - redirect to home (let home handle further redirect)
+      // User is already logged in - redirect to home (home will check role and redirect to proper dashboard)
       return NextResponse.redirect(new URL("/", request.url));
     }
   }

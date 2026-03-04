@@ -138,12 +138,12 @@ async function main() {
   // Seed users
   console.log("👥 Seeding users...");
   for (const user of dummyUsers) {
-    const hashedPassword = await bcrypt.hash(user.password, 12);
+    const hashedPwd = await bcrypt.hash(user.password, 12);
     await prisma.user.create({
       data: {
         name: user.name,
         email: user.email,
-        hashedPassword: hashedPassword,
+        password: hashedPwd,
         role: user.role as any,
         isApproved: user.isApproved,
         balance: user.balance,

@@ -60,11 +60,11 @@ function middleware(request) {
         // Note: Role checking is done in the respective layout/page components
         return __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$esm$2f$server$2f$web$2f$exports$2f$index$2e$js__$5b$middleware$2d$edge$5d$__$28$ecmascript$29$__["NextResponse"].next();
     }
-    // For login page, redirect authenticated users to their dashboard
+    // For login page, redirect authenticated users to home (which will check role and redirect to dashboard)
     if (pathname === "/login" && sessionCookie) {
         const session = decodeSession(sessionCookie);
         if (session && session.expiresAt > Date.now()) {
-            // User is already logged in - redirect to home (let home handle further redirect)
+            // User is already logged in - redirect to home (home will check role and redirect to proper dashboard)
             return __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$esm$2f$server$2f$web$2f$exports$2f$index$2e$js__$5b$middleware$2d$edge$5d$__$28$ecmascript$29$__["NextResponse"].redirect(new URL("/", request.url));
         }
     }
