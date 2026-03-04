@@ -14,6 +14,11 @@ import {
   Upload,
   Save,
   AlertCircle,
+  Search,
+  Package,
+  DollarSign,
+  CheckCircle,
+  XCircle,
 } from "lucide-react";
 
 interface Menu {
@@ -42,6 +47,7 @@ export default function MenuManagementPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
 
   // Form states
   const [formName, setFormName] = useState("");
@@ -180,187 +186,344 @@ export default function MenuManagementPage() {
     }
   };
 
+  // Filter menus
+  const filteredMenus = menus.filter(
+    (menu) =>
+      menu.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      menu.description.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const availableMenus = filteredMenus.filter((m) => m.status === "AVAILABLE");
+  const outOfStockMenus = filteredMenus.filter((m) => m.status === "OUT_OF_STOCK");
+
+  // Stats
+  const totalMenus = menus.length;
+  const totalAvailable = menus.filter((m) => m.status === "AVAILABLE").length;
+  const totalOutOfStock = menus.filter((m) => m.status === "OUT_OF_STOCK").length;
+
   return (
-    <div className="min-h-screen bg-slate-950">
+    <div className="min-h-screen bg-neutral-950">
       {/* Header */}
-      <header className="sticky top-0 z-40 bg-slate-950/80 backdrop-blur-xl border-b border-slate-800">
-        <div className="px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
+      <header className="sticky top-0 z-40 bg-neutral-950/80 backdrop-blur-xl border-b border-neutral-800">
+        <div className="max-w-7xl mx-auto px-4 lg:px-8 py-4 flex items-center justify-between">
+          <div className="flex items-center gap-4">
             <button
               onClick={() => router.back()}
-              className="p-2 rounded-full bg-slate-800/50 text-slate-400 hover:text-white transition-colors"
+              className="p-2 rounded-xl bg-neutral-800/50 text-neutral-400 hover:text-white hover:bg-neutral-800 transition-all"
             >
               <ArrowLeft className="w-5 h-5" />
             </button>
-            <h1 className="text-lg font-bold text-white">Kelola Menu</h1>
+            <div>
+              <h1 className="text-xl font-bold text-white">Kelola Menu</h1>
+              <p className="text-sm text-neutral-400">Tambah, edit, atau hapus menu dagangan</p>
+            </div>
           </div>
           <button
             onClick={openAddModal}
-            className="bg-orange-500 hover:bg-orange-600 text-white p-2 rounded-xl transition-colors"
+            className="flex items-center gap-2 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white font-semibold px-5 py-2.5 rounded-xl transition-all shadow-lg shadow-orange-500/25"
           >
             <Plus className="w-5 h-5" />
+            <span className="hidden sm:inline">Tambah Menu</span>
           </button>
         </div>
       </header>
 
-      <main className="px-4 py-6 pb-24 max-w-4xl mx-auto">
+      <main className="max-w-7xl mx-auto px-4 lg:px-8 py-8">
+        {/* Stats Cards */}
+        <div className="grid grid-cols-3 gap-4 mb-8">
+          <div className="bg-neutral-900/50 border border-neutral-800 rounded-xl p-5">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 bg-orange-500/20 rounded-xl flex items-center justify-center">
+                <Package className="w-6 h-6 text-orange-400" />
+              </div>
+              <div>
+                <p className="text-neutral-400 text-sm">Total Menu</p>
+                <p className="text-2xl font-bold text-white">{totalMenus}</p>
+              </div>
+            </div>
+          </div>
+          <div className="bg-neutral-900/50 border border-neutral-800 rounded-xl p-5">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 bg-green-500/20 rounded-xl flex items-center justify-center">
+                <CheckCircle className="w-6 h-6 text-green-400" />
+              </div>
+              <div>
+                <p className="text-neutral-400 text-sm">Tersedia</p>
+                <p className="text-2xl font-bold text-white">{totalAvailable}</p>
+              </div>
+            </div>
+          </div>
+          <div className="bg-neutral-900/50 border border-neutral-800 rounded-xl p-5">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 bg-red-500/20 rounded-xl flex items-center justify-center">
+                <XCircle className="w-6 h-6 text-red-400" />
+              </div>
+              <div>
+                <p className="text-neutral-400 text-sm">Habis</p>
+                <p className="text-2xl font-bold text-white">{totalOutOfStock}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Search */}
+        <div className="mb-6">
+          <div className="relative max-w-md">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-neutral-400" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Cari menu..."
+              className="w-full pl-12 pr-4 py-3 bg-neutral-900 border border-neutral-800 rounded-xl text-white placeholder-neutral-500 focus:outline-none focus:border-orange-500 transition-colors"
+            />
+          </div>
+        </div>
+
         {isLoading ? (
-          <div className="grid gap-4">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="bg-slate-900/50 border border-slate-800 rounded-xl p-4 animate-pulse">
-                <div className="flex gap-4">
-                  <div className="w-20 h-20 bg-slate-800 rounded-lg" />
-                  <div className="flex-1">
-                    <div className="bg-slate-800 h-4 rounded w-1/3 mb-2" />
-                    <div className="bg-slate-800 h-3 rounded w-2/3 mb-2" />
-                    <div className="bg-slate-800 h-3 rounded w-1/4" />
-                  </div>
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
+              <div key={i} className="bg-neutral-900/50 border border-neutral-800 rounded-2xl overflow-hidden animate-pulse">
+                <div className="h-40 bg-neutral-800" />
+                <div className="p-5">
+                  <div className="bg-neutral-800 h-5 rounded w-3/4 mb-2" />
+                  <div className="bg-neutral-800 h-4 rounded w-1/2 mb-4" />
+                  <div className="bg-neutral-800 h-6 rounded w-1/3" />
                 </div>
               </div>
             ))}
           </div>
         ) : menus.length === 0 ? (
-          <div className="text-center py-16">
-            <Utensils className="w-16 h-16 mx-auto mb-4 text-slate-600" />
-            <p className="text-slate-400 mb-4">Belum ada menu</p>
+          <div className="flex flex-col items-center justify-center py-20">
+            <div className="w-24 h-24 bg-neutral-900 rounded-full flex items-center justify-center mb-6">
+              <Utensils className="w-12 h-12 text-neutral-600" />
+            </div>
+            <h2 className="text-xl font-semibold text-white mb-2">Belum ada menu</h2>
+            <p className="text-neutral-400 mb-6 text-center max-w-md">
+              Tambahkan menu pertamamu untuk mulai berjualan
+            </p>
             <button
               onClick={openAddModal}
-              className="inline-flex items-center gap-2 bg-orange-500 hover:bg-orange-600 text-white font-semibold px-6 py-3 rounded-xl transition-colors"
+              className="inline-flex items-center gap-2 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white font-semibold px-6 py-3 rounded-xl transition-all shadow-lg shadow-orange-500/25"
             >
               <Plus className="w-5 h-5" />
               Tambah Menu Pertama
             </button>
           </div>
         ) : (
-          <div className="grid gap-4">
-            {menus.map((menu) => (
-              <div
-                key={menu.id}
-                className={`bg-slate-900/50 border rounded-xl p-4 ${
-                  menu.status === "OUT_OF_STOCK" ? "border-red-500/30 opacity-60" : "border-slate-800"
-                }`}
-              >
-                <div className="flex gap-4">
-                  <div className="w-20 h-20 bg-slate-800 rounded-lg flex items-center justify-center flex-shrink-0 overflow-hidden">
-                    {menu.image ? (
-                      <img src={menu.image} alt={menu.name} className="w-full h-full object-cover" />
-                    ) : (
-                      <Utensils className="w-8 h-8 text-slate-600" />
-                    )}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-start justify-between gap-2 mb-1">
-                      <h3 className="text-white font-semibold truncate">{menu.name}</h3>
-                      <span
-                        className={`text-xs font-medium px-2 py-0.5 rounded-full flex-shrink-0 ${
-                          menu.status === "AVAILABLE"
-                            ? "bg-emerald-500/20 text-emerald-400"
-                            : "bg-red-500/20 text-red-400"
-                        }`}
-                      >
-                        {menu.status === "AVAILABLE" ? "Tersedia" : "Habis"}
-                      </span>
-                    </div>
-                    <p className="text-slate-400 text-sm line-clamp-2 mb-2">{menu.description}</p>
-                    <p className="text-orange-400 font-bold">{formatPrice(menu.price)}</p>
-                  </div>
-                </div>
+          <div className="space-y-8">
+            {/* Available Menus */}
+            {availableMenus.length > 0 && (
+              <div>
+                <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+                  <CheckCircle className="w-5 h-5 text-green-400" />
+                  Menu Tersedia ({availableMenus.length})
+                </h2>
+                <div className="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                  {availableMenus.map((menu) => (
+                    <div
+                      key={menu.id}
+                      className="bg-neutral-900/50 border border-neutral-800 rounded-2xl overflow-hidden hover:border-orange-500/50 transition-all group"
+                    >
+                      {/* Image */}
+                      <div className="relative h-40 bg-gradient-to-br from-neutral-800 to-neutral-900 overflow-hidden">
+                        {menu.image ? (
+                          <img src={menu.image} alt={menu.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                        ) : (
+                          <div className="flex items-center justify-center h-full">
+                            <Utensils className="w-12 h-12 text-neutral-700" />
+                          </div>
+                        )}
+                        <div className="absolute top-3 right-3">
+                          <span className="bg-green-500/20 text-green-400 text-xs font-medium px-2.5 py-1 rounded-full">
+                            Tersedia
+                          </span>
+                        </div>
+                      </div>
 
-                {/* Actions */}
-                <div className="flex items-center justify-end gap-2 mt-4 pt-4 border-t border-slate-800">
-                  <button
-                    onClick={() => toggleStatus(menu)}
-                    className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm transition-colors ${
-                      menu.status === "AVAILABLE"
-                        ? "bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20"
-                        : "bg-slate-500/10 text-slate-400 hover:bg-slate-500/20"
-                    }`}
-                  >
-                    {menu.status === "AVAILABLE" ? (
-                      <>
-                        <ToggleRight className="w-4 h-4" /> Tersedia
-                      </>
-                    ) : (
-                      <>
-                        <ToggleLeft className="w-4 h-4" /> Habis
-                      </>
-                    )}
-                  </button>
-                  <button
-                    onClick={() => openEditModal(menu)}
-                    className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 text-sm transition-colors"
-                  >
-                    <Edit className="w-4 h-4" /> Edit
-                  </button>
-                  <button
-                    onClick={() => setDeleteConfirm(menu.id)}
-                    className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20 text-sm transition-colors"
-                  >
-                    <Trash2 className="w-4 h-4" /> Hapus
-                  </button>
-                </div>
+                      {/* Content */}
+                      <div className="p-5">
+                        <h3 className="text-white font-semibold text-lg mb-1 truncate">{menu.name}</h3>
+                        <p className="text-neutral-400 text-sm line-clamp-2 mb-3">{menu.description}</p>
+                        <p className="text-orange-400 font-bold text-xl">{formatPrice(menu.price)}</p>
+                      </div>
 
-                {/* Delete Confirmation */}
-                {deleteConfirm === menu.id && (
-                  <div className="mt-3 p-3 bg-red-500/10 border border-red-500/30 rounded-lg">
-                    <p className="text-red-400 text-sm mb-3">
-                      Yakin ingin menghapus menu "{menu.name}"?
-                    </p>
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => handleDelete(menu.id)}
-                        className="px-3 py-1.5 bg-red-500 text-white text-sm rounded-lg hover:bg-red-600"
-                      >
-                        Ya, Hapus
-                      </button>
-                      <button
-                        onClick={() => setDeleteConfirm(null)}
-                        className="px-3 py-1.5 bg-slate-700 text-white text-sm rounded-lg hover:bg-slate-600"
-                      >
-                        Batal
-                      </button>
+                      {/* Actions */}
+                      <div className="px-5 pb-5 flex gap-2">
+                        <button
+                          onClick={() => toggleStatus(menu)}
+                          className="flex-1 flex items-center justify-center gap-2 px-3 py-2.5 bg-neutral-800 hover:bg-neutral-700 rounded-xl text-sm text-orange-400 font-medium transition-colors"
+                        >
+                          <ToggleRight className="w-4 h-4" />
+                          Habiskan
+                        </button>
+                        <button
+                          onClick={() => openEditModal(menu)}
+                          className="p-2.5 bg-amber-500/10 hover:bg-amber-500/20 rounded-xl text-amber-400 transition-colors"
+                        >
+                          <Edit className="w-5 h-5" />
+                        </button>
+                        <button
+                          onClick={() => setDeleteConfirm(menu.id)}
+                          className="p-2.5 bg-red-500/10 hover:bg-red-500/20 rounded-xl text-red-400 transition-colors"
+                        >
+                          <Trash2 className="w-5 h-5" />
+                        </button>
+                      </div>
+
+                      {/* Delete Confirmation */}
+                      {deleteConfirm === menu.id && (
+                        <div className="px-5 pb-5">
+                          <div className="p-3 bg-red-500/10 border border-red-500/30 rounded-xl">
+                            <p className="text-red-400 text-sm mb-3">Hapus "{menu.name}"?</p>
+                            <div className="flex gap-2">
+                              <button
+                                onClick={() => handleDelete(menu.id)}
+                                className="flex-1 px-3 py-2 bg-red-500 text-white text-sm rounded-lg hover:bg-red-600 font-medium"
+                              >
+                                Ya, Hapus
+                              </button>
+                              <button
+                                onClick={() => setDeleteConfirm(null)}
+                                className="flex-1 px-3 py-2 bg-neutral-700 text-white text-sm rounded-lg hover:bg-neutral-600"
+                              >
+                                Batal
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      )}
                     </div>
-                  </div>
-                )}
+                  ))}
+                </div>
               </div>
-            ))}
+            )}
+
+            {/* Out of Stock Menus */}
+            {outOfStockMenus.length > 0 && (
+              <div>
+                <h2 className="text-lg font-semibold text-neutral-400 mb-4 flex items-center gap-2">
+                  <XCircle className="w-5 h-5 text-red-400" />
+                  Menu Habis ({outOfStockMenus.length})
+                </h2>
+                <div className="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                  {outOfStockMenus.map((menu) => (
+                    <div
+                      key={menu.id}
+                      className="bg-neutral-900/30 border border-neutral-800/50 rounded-2xl overflow-hidden opacity-60 hover:opacity-100 transition-all"
+                    >
+                      {/* Image */}
+                      <div className="relative h-40 bg-gradient-to-br from-neutral-800 to-neutral-900 overflow-hidden grayscale">
+                        {menu.image ? (
+                          <img src={menu.image} alt={menu.name} className="w-full h-full object-cover" />
+                        ) : (
+                          <div className="flex items-center justify-center h-full">
+                            <Utensils className="w-12 h-12 text-neutral-700" />
+                          </div>
+                        )}
+                        <div className="absolute top-3 right-3">
+                          <span className="bg-red-500/20 text-red-400 text-xs font-medium px-2.5 py-1 rounded-full">
+                            Habis
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Content */}
+                      <div className="p-5">
+                        <h3 className="text-neutral-300 font-semibold text-lg mb-1 truncate">{menu.name}</h3>
+                        <p className="text-neutral-500 text-sm line-clamp-2 mb-3">{menu.description}</p>
+                        <p className="text-neutral-400 font-bold text-xl">{formatPrice(menu.price)}</p>
+                      </div>
+
+                      {/* Actions */}
+                      <div className="px-5 pb-5 flex gap-2">
+                        <button
+                          onClick={() => toggleStatus(menu)}
+                          className="flex-1 flex items-center justify-center gap-2 px-3 py-2.5 bg-green-500/10 hover:bg-green-500/20 rounded-xl text-sm text-green-400 font-medium transition-colors"
+                        >
+                          <ToggleLeft className="w-4 h-4" />
+                          Sediakan
+                        </button>
+                        <button
+                          onClick={() => openEditModal(menu)}
+                          className="p-2.5 bg-amber-500/10 hover:bg-amber-500/20 rounded-xl text-amber-400 transition-colors"
+                        >
+                          <Edit className="w-5 h-5" />
+                        </button>
+                        <button
+                          onClick={() => setDeleteConfirm(menu.id)}
+                          className="p-2.5 bg-red-500/10 hover:bg-red-500/20 rounded-xl text-red-400 transition-colors"
+                        >
+                          <Trash2 className="w-5 h-5" />
+                        </button>
+                      </div>
+
+                      {/* Delete Confirmation */}
+                      {deleteConfirm === menu.id && (
+                        <div className="px-5 pb-5">
+                          <div className="p-3 bg-red-500/10 border border-red-500/30 rounded-xl">
+                            <p className="text-red-400 text-sm mb-3">Hapus "{menu.name}"?</p>
+                            <div className="flex gap-2">
+                              <button
+                                onClick={() => handleDelete(menu.id)}
+                                className="flex-1 px-3 py-2 bg-red-500 text-white text-sm rounded-lg hover:bg-red-600 font-medium"
+                              >
+                                Ya, Hapus
+                              </button>
+                              <button
+                                onClick={() => setDeleteConfirm(null)}
+                                className="flex-1 px-3 py-2 bg-neutral-700 text-white text-sm rounded-lg hover:bg-neutral-600"
+                              >
+                                Batal
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         )}
       </main>
 
       {/* Add/Edit Modal */}
       {showModal && (
-        <div className="fixed inset-0 z-50">
-          <div className="absolute inset-0 bg-black/60" onClick={() => setShowModal(false)} />
-          <div className="absolute inset-x-4 top-1/2 -translate-y-1/2 max-w-lg mx-auto bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden max-h-[90vh] flex flex-col">
-            <div className="flex items-center justify-between p-4 border-b border-slate-800">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={() => setShowModal(false)} />
+          <div className="relative bg-neutral-900 border border-neutral-800 rounded-2xl w-full max-w-lg max-h-[90vh] flex flex-col overflow-hidden shadow-2xl">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between p-5 border-b border-neutral-800">
               <h2 className="text-lg font-bold text-white">
                 {editingMenu ? "Edit Menu" : "Tambah Menu Baru"}
               </h2>
               <button
                 onClick={() => setShowModal(false)}
-                className="p-2 rounded-full hover:bg-slate-800 text-slate-400"
+                className="p-2 rounded-xl hover:bg-neutral-800 text-neutral-400 hover:text-white transition-colors"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-4 space-y-4">
+            {/* Modal Content */}
+            <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-5 space-y-5">
               {/* Image Upload */}
               <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">
+                <label className="block text-sm font-medium text-neutral-300 mb-2">
                   Foto Menu (Opsional)
                 </label>
                 <div className="flex items-center gap-4">
-                  <div className="w-24 h-24 bg-slate-800 rounded-xl flex items-center justify-center overflow-hidden">
+                  <div className="w-24 h-24 bg-neutral-800 rounded-xl flex items-center justify-center overflow-hidden border border-neutral-700">
                     {formImage ? (
                       <img src={formImage} alt="Preview" className="w-full h-full object-cover" />
                     ) : (
-                      <Utensils className="w-8 h-8 text-slate-600" />
+                      <Utensils className="w-8 h-8 text-neutral-600" />
                     )}
                   </div>
-                  <div>
-                    <label className="cursor-pointer inline-flex items-center gap-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-lg text-sm transition-colors">
+                  <div className="space-y-2">
+                    <label className="cursor-pointer inline-flex items-center gap-2 px-4 py-2.5 bg-neutral-800 hover:bg-neutral-700 text-white rounded-xl text-sm font-medium transition-colors">
                       <Upload className="w-4 h-4" />
                       Upload Foto
                       <input
@@ -374,9 +537,9 @@ export default function MenuManagementPage() {
                       <button
                         type="button"
                         onClick={() => setFormImage("")}
-                        className="ml-2 text-red-400 text-sm hover:text-red-300"
+                        className="block text-red-400 text-sm hover:text-red-300"
                       >
-                        Hapus
+                        Hapus foto
                       </button>
                     )}
                   </div>
@@ -385,73 +548,78 @@ export default function MenuManagementPage() {
 
               {/* Name */}
               <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">
-                  Nama Menu *
+                <label className="block text-sm font-medium text-neutral-300 mb-2">
+                  Nama Menu <span className="text-red-400">*</span>
                 </label>
                 <input
                   type="text"
                   value={formName}
                   onChange={(e) => setFormName(e.target.value)}
                   placeholder="Contoh: Nasi Goreng Spesial"
-                  className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:border-orange-500"
+                  className="w-full px-4 py-3 bg-neutral-800 border border-neutral-700 rounded-xl text-white placeholder-neutral-500 focus:outline-none focus:border-orange-500 transition-colors"
                 />
               </div>
 
               {/* Description */}
               <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">
-                  Deskripsi *
+                <label className="block text-sm font-medium text-neutral-300 mb-2">
+                  Deskripsi <span className="text-red-400">*</span>
                 </label>
                 <textarea
                   value={formDescription}
                   onChange={(e) => setFormDescription(e.target.value)}
                   placeholder="Deskripsi menu..."
                   rows={3}
-                  className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:border-orange-500 resize-none"
+                  className="w-full px-4 py-3 bg-neutral-800 border border-neutral-700 rounded-xl text-white placeholder-neutral-500 focus:outline-none focus:border-orange-500 resize-none transition-colors"
                 />
               </div>
 
               {/* Price */}
               <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">
-                  Harga (Rp) *
+                <label className="block text-sm font-medium text-neutral-300 mb-2">
+                  Harga (Rp) <span className="text-red-400">*</span>
                 </label>
-                <input
-                  type="number"
-                  value={formPrice}
-                  onChange={(e) => setFormPrice(e.target.value)}
-                  placeholder="15000"
-                  min="0"
-                  className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:border-orange-500"
-                />
+                <div className="relative">
+                  <DollarSign className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-neutral-500" />
+                  <input
+                    type="number"
+                    value={formPrice}
+                    onChange={(e) => setFormPrice(e.target.value)}
+                    placeholder="15000"
+                    min="0"
+                    className="w-full pl-12 pr-4 py-3 bg-neutral-800 border border-neutral-700 rounded-xl text-white placeholder-neutral-500 focus:outline-none focus:border-orange-500 transition-colors"
+                  />
+                </div>
               </div>
 
               {/* Status */}
               <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">
+                <label className="block text-sm font-medium text-neutral-300 mb-2">
                   Status Ketersediaan
                 </label>
-                <div className="flex gap-3">
+                <div className="grid grid-cols-2 gap-3">
                   <button
                     type="button"
                     onClick={() => setFormStatus("AVAILABLE")}
-                    className={`flex-1 py-3 rounded-xl border text-sm font-medium transition-colors ${
+                    className={`flex items-center justify-center gap-2 py-3 rounded-xl border text-sm font-medium transition-all ${
                       formStatus === "AVAILABLE"
-                        ? "border-emerald-500 bg-emerald-500/10 text-emerald-400"
-                        : "border-slate-700 text-slate-400 hover:border-slate-600"
+                        ? "border-green-500 bg-green-500/10 text-green-400"
+                        : "border-neutral-700 text-neutral-400 hover:border-neutral-600"
                     }`}
                   >
+                    <CheckCircle className="w-4 h-4" />
                     Tersedia
                   </button>
                   <button
                     type="button"
                     onClick={() => setFormStatus("OUT_OF_STOCK")}
-                    className={`flex-1 py-3 rounded-xl border text-sm font-medium transition-colors ${
+                    className={`flex items-center justify-center gap-2 py-3 rounded-xl border text-sm font-medium transition-all ${
                       formStatus === "OUT_OF_STOCK"
                         ? "border-red-500 bg-red-500/10 text-red-400"
-                        : "border-slate-700 text-slate-400 hover:border-slate-600"
+                        : "border-neutral-700 text-neutral-400 hover:border-neutral-600"
                     }`}
                   >
+                    <XCircle className="w-4 h-4" />
                     Habis
                   </button>
                 </div>
@@ -459,26 +627,26 @@ export default function MenuManagementPage() {
 
               {/* Error */}
               {error && (
-                <div className="flex items-center gap-2 p-3 bg-red-500/10 border border-red-500/30 rounded-xl">
+                <div className="flex items-center gap-2 p-4 bg-red-500/10 border border-red-500/30 rounded-xl">
                   <AlertCircle className="w-5 h-5 text-red-400 flex-shrink-0" />
                   <p className="text-red-400 text-sm">{error}</p>
                 </div>
               )}
             </form>
 
-            {/* Actions */}
-            <div className="p-4 border-t border-slate-800 flex gap-3">
+            {/* Modal Footer */}
+            <div className="p-5 border-t border-neutral-800 flex gap-3">
               <button
                 type="button"
                 onClick={() => setShowModal(false)}
-                className="flex-1 py-3 bg-slate-800 hover:bg-slate-700 text-white font-semibold rounded-xl transition-colors"
+                className="flex-1 py-3 bg-neutral-800 hover:bg-neutral-700 text-white font-semibold rounded-xl transition-colors"
               >
                 Batal
               </button>
               <button
                 onClick={handleSubmit}
                 disabled={isSubmitting}
-                className="flex-1 py-3 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white font-semibold rounded-xl transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                className="flex-1 py-3 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white font-semibold rounded-xl transition-all disabled:opacity-50 flex items-center justify-center gap-2 shadow-lg shadow-orange-500/25"
               >
                 {isSubmitting ? (
                   <>

@@ -120,7 +120,7 @@ export default function AdminUsersPage() {
             <h1 className="text-xl sm:text-2xl font-bold text-white">
               Manajemen Penjual
             </h1>
-            <p className="text-sm text-slate-400">
+            <p className="text-sm text-neutral-400">
               Kelola persetujuan akun penjual
             </p>
           </div>
@@ -129,25 +129,25 @@ export default function AdminUsersPage() {
 
       {/* Stats Cards */}
       <div className="grid grid-cols-2 gap-4">
-        <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-4">
+        <div className="bg-neutral-800/50 border border-neutral-700/50 rounded-xl p-4">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 bg-amber-500/20 rounded-lg flex items-center justify-center">
               <Clock className="w-5 h-5 text-amber-400" />
             </div>
             <div>
               <p className="text-2xl font-bold text-white">{pendingUsers.length}</p>
-              <p className="text-sm text-slate-400">Menunggu Persetujuan</p>
+              <p className="text-sm text-neutral-400">Menunggu Persetujuan</p>
             </div>
           </div>
         </div>
-        <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-4">
+        <div className="bg-neutral-800/50 border border-neutral-700/50 rounded-xl p-4">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-emerald-500/20 rounded-lg flex items-center justify-center">
-              <Store className="w-5 h-5 text-emerald-400" />
+            <div className="w-10 h-10 bg-orange-500/20 rounded-lg flex items-center justify-center">
+              <Store className="w-5 h-5 text-orange-400" />
             </div>
             <div>
               <p className="text-2xl font-bold text-white">{approvedUsers.length}</p>
-              <p className="text-sm text-slate-400">Penjual Aktif</p>
+              <p className="text-sm text-neutral-400">Penjual Aktif</p>
             </div>
           </div>
         </div>
@@ -155,7 +155,7 @@ export default function AdminUsersPage() {
 
       {/* Pending Approvals */}
       {pendingUsers.length > 0 && (
-        <div className="bg-slate-800/50 border border-amber-500/30 rounded-xl p-4 sm:p-6">
+        <div className="bg-neutral-800/50 border border-amber-500/30 rounded-xl p-4 sm:p-6">
           <div className="flex items-center gap-2 mb-4">
             <Clock className="w-5 h-5 text-amber-400" />
             <h2 className="text-lg font-semibold text-white">
@@ -166,7 +166,7 @@ export default function AdminUsersPage() {
             {pendingUsers.map((user) => (
               <div
                 key={user.id}
-                className="bg-slate-900/50 border border-slate-700/50 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4"
+                className="bg-neutral-900/50 border border-neutral-700/50 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4"
               >
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 bg-amber-500/20 rounded-full flex items-center justify-center">
@@ -174,7 +174,7 @@ export default function AdminUsersPage() {
                   </div>
                   <div>
                     <p className="font-medium text-white">{user.name}</p>
-                    <div className="flex items-center gap-1 text-sm text-slate-400">
+                    <div className="flex items-center gap-1 text-sm text-neutral-400">
                       <Mail className="w-3 h-3" />
                       {user.email}
                     </div>
@@ -184,7 +184,7 @@ export default function AdminUsersPage() {
                   <button
                     onClick={() => handleApprove(user.id, user.name)}
                     disabled={processingId === user.id}
-                    className="flex items-center gap-2 px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg font-medium transition-colors disabled:opacity-50"
+                    className="flex items-center gap-2 px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-lg font-medium transition-colors disabled:opacity-50"
                   >
                     {processingId === user.id ? (
                       <Loader2 className="w-4 h-4 animate-spin" />
@@ -209,15 +209,15 @@ export default function AdminUsersPage() {
       )}
 
       {/* Approved Users */}
-      <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-4 sm:p-6">
+      <div className="bg-neutral-800/50 border border-neutral-700/50 rounded-xl p-4 sm:p-6">
         <div className="flex items-center gap-2 mb-4">
-          <CheckCircle className="w-5 h-5 text-emerald-400" />
+          <CheckCircle className="w-5 h-5 text-orange-400" />
           <h2 className="text-lg font-semibold text-white">
             Penjual Aktif ({approvedUsers.length})
           </h2>
         </div>
         {approvedUsers.length === 0 ? (
-          <p className="text-slate-400 text-center py-8">
+          <p className="text-neutral-400 text-center py-8">
             Belum ada penjual yang disetujui
           </p>
         ) : (
@@ -225,21 +225,21 @@ export default function AdminUsersPage() {
             {approvedUsers.map((user) => (
               <div
                 key={user.id}
-                className="bg-slate-900/50 border border-slate-700/50 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4"
+                className="bg-neutral-900/50 border border-neutral-700/50 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4"
               >
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-emerald-500/20 rounded-full flex items-center justify-center">
-                    <Store className="w-5 h-5 text-emerald-400" />
+                  <div className="w-10 h-10 bg-orange-500/20 rounded-full flex items-center justify-center">
+                    <Store className="w-5 h-5 text-orange-400" />
                   </div>
                   <div>
                     <p className="font-medium text-white">{user.name}</p>
-                    <div className="flex items-center gap-1 text-sm text-slate-400">
+                    <div className="flex items-center gap-1 text-sm text-neutral-400">
                       <Mail className="w-3 h-3" />
                       {user.email}
                     </div>
                   </div>
                 </div>
-                <span className="inline-flex items-center gap-1 px-3 py-1 bg-emerald-500/20 text-emerald-400 rounded-full text-sm font-medium">
+                <span className="inline-flex items-center gap-1 px-3 py-1 bg-orange-500/20 text-orange-400 rounded-full text-sm font-medium">
                   <CheckCircle className="w-3 h-3" />
                   Aktif
                 </span>

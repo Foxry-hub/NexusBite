@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { getSessionUser } from "@/lib/auth";
-import AdminNavbar from "./components/AdminNavbar";
+import AdminSidebar from "./components/AdminSidebar";
 
 export const metadata: Metadata = {
     title: "Admin Dashboard — NexusBite",
@@ -25,10 +25,10 @@ export default async function AdminLayout({
     }
 
     return (
-        <div className="min-h-screen bg-gray-950 text-gray-100">
-            <AdminNavbar userName={user.name} />
+        <div className="min-h-screen bg-neutral-950 text-neutral-100">
+            <AdminSidebar user={user} />
             {/* Main Content */}
-            <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+            <main className="ml-64 min-h-screen p-8">
                 {children}
             </main>
         </div>

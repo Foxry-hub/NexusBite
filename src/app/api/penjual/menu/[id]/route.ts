@@ -12,6 +12,11 @@ export async function GET(
     
     const menu = await prisma.menu.findUnique({
       where: { id },
+      include: {
+        seller: {
+          select: { id: true, name: true },
+        },
+      },
     });
 
     if (!menu) {
@@ -31,7 +36,7 @@ export async function GET(
   }
 }
 
-// PATCH - Update menu
+// PATCH - Update menu (only owner can update)
 export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -42,11 +47,25 @@ export async function PATCH(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    if (user.role !== "PENJUAL" && user.role !== "ADMIN") {
+    if (user.role !== "PENJUAL") {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
     const { id } = await params;
+    
+    // Check if menu belongs to this seller
+    const existingMenu = await prisma.menu.findUnique({
+      where: { id },
+    });
+
+    if (!existingMenu) {
+      return NextResponse.json({ error: "Menu tidak ditemukan" }, { status: 404 });
+    }
+
+    if (existingMenu.sellerId !== user.id) {
+      return NextResponse.json({ error: "Anda tidak memiliki akses ke menu ini" }, { status: 403 });
+    }
+
     const body = await request.json();
     const { name, description, price, image, status } = body;
 
@@ -72,7 +91,7 @@ export async function PATCH(
   }
 }
 
-// DELETE - Delete menu
+// DELETE - Delete menu (only owner can delete)
 export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -83,11 +102,24 @@ export async function DELETE(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    if (user.role !== "PENJUAL" && user.role !== "ADMIN") {
+    if (user.role !== "PENJUAL") {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
     const { id } = await params;
+
+    // Check if menu belongs to this seller
+    const existingMenu = await prisma.menu.findUnique({
+      where: { id },
+    });
+
+    if (!existingMenu) {
+      return NextResponse.json({ error: "Menu tidak ditemukan" }, { status: 404 });
+    }
+
+    if (existingMenu.sellerId !== user.id) {
+      return NextResponse.json({ error: "Anda tidak memiliki akses ke menu ini" }, { status: 403 });
+    }
 
     await prisma.menu.delete({
       where: { id },

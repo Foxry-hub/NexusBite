@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { getSessionUser } from "@/lib/auth";
 
-// GET - Get penjual's menus
+// GET - Get penjual's own menus
 export async function GET() {
   try {
     const user = await getSessionUser();
@@ -10,11 +10,13 @@ export async function GET() {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    if (user.role !== "PENJUAL" && user.role !== "ADMIN") {
+    if (user.role !== "PENJUAL") {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
+    // Only get menus belonging to this seller
     const menus = await prisma.menu.findMany({
+      where: { sellerId: user.id },
       orderBy: { createdAt: "desc" },
     });
 
@@ -28,7 +30,7 @@ export async function GET() {
   }
 }
 
-// POST - Create new menu
+// POST - Create new menu (owned by logged in penjual)
 export async function POST(request: NextRequest) {
   try {
     const user = await getSessionUser();
@@ -36,7 +38,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    if (user.role !== "PENJUAL" && user.role !== "ADMIN") {
+    if (user.role !== "PENJUAL") {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
@@ -64,6 +66,7 @@ export async function POST(request: NextRequest) {
         price: parseInt(price),
         image: image || null,
         status: status || "AVAILABLE",
+        sellerId: user.id, // Assign to logged in penjual
       },
     });
 

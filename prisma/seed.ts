@@ -72,55 +72,65 @@ const dummyUsers = [
   },
 ];
 
-// Dummy menus for seeding
+// Dummy menus for seeding - will be assigned to sellers
 const dummyMenus = [
+  // Menu untuk Pak Joko - Warung Sederhana
   {
     name: "Nasi Goreng Spesial",
     description: "Nasi goreng dengan telur, ayam, dan sayuran segar. Disajikan dengan kerupuk dan acar.",
     price: 15000,
     status: "AVAILABLE" as const,
+    sellerEmail: "joko.penjual@gmail.com",
   },
   {
     name: "Mie Ayam Bakso",
     description: "Mie ayam dengan bakso sapi pilihan, disajikan dengan kuah kaldu gurih.",
     price: 12000,
     status: "AVAILABLE" as const,
+    sellerEmail: "joko.penjual@gmail.com",
   },
   {
     name: "Ayam Geprek",
     description: "Ayam goreng crispy dengan sambal geprek pedas level 1-5.",
     price: 18000,
     status: "AVAILABLE" as const,
+    sellerEmail: "joko.penjual@gmail.com",
   },
   {
     name: "Es Teh Manis",
     description: "Teh manis dingin segar, cocok untuk menemani makan siang.",
     price: 5000,
     status: "AVAILABLE" as const,
+    sellerEmail: "joko.penjual@gmail.com",
   },
+  // Menu untuk Bu Siti - Kantin Berkah
   {
     name: "Soto Ayam",
     description: "Soto ayam dengan kuah kuning khas Jawa, dilengkapi nasi dan emping.",
     price: 14000,
     status: "AVAILABLE" as const,
+    sellerEmail: "siti.penjual@gmail.com",
   },
   {
     name: "Jus Alpukat",
     description: "Jus alpukat segar dengan susu coklat.",
     price: 10000,
     status: "OUT_OF_STOCK" as const,
+    sellerEmail: "siti.penjual@gmail.com",
   },
   {
     name: "Bakso Urat",
     description: "Bakso urat sapi dengan mie, bihun, dan tahu. Kuah kaldu sapi gurih.",
     price: 15000,
     status: "AVAILABLE" as const,
+    sellerEmail: "siti.penjual@gmail.com",
   },
   {
     name: "Nasi Uduk Komplit",
     description: "Nasi uduk dengan ayam goreng, tempe orek, dan sambal.",
     price: 16000,
     status: "AVAILABLE" as const,
+    sellerEmail: "siti.penjual@gmail.com",
   },
 ];
 
@@ -135,11 +145,13 @@ async function main() {
   await prisma.user.deleteMany();
   console.log("✅ Existing data cleared\n");
 
-  // Seed users
+  // Seed users and store them for menu assignment
   console.log("👥 Seeding users...");
+  const createdUsers: { [email: string]: string } = {};
+  
   for (const user of dummyUsers) {
     const hashedPwd = await bcrypt.hash(user.password, 12);
-    await prisma.user.create({
+    const created = await prisma.user.create({
       data: {
         name: user.name,
         email: user.email,
@@ -149,18 +161,30 @@ async function main() {
         balance: user.balance,
       },
     });
+    createdUsers[user.email] = created.id;
     const status = user.isApproved ? "✅" : "⏳";
     console.log(`   ${status} Created ${user.role}: ${user.email}${!user.isApproved ? " (pending)" : ""}`);
   }
   console.log("");
 
-  // Seed menus
+  // Seed menus with seller assignment
   console.log("🍽️  Seeding menus...");
   for (const menu of dummyMenus) {
+    const sellerId = createdUsers[menu.sellerEmail];
+    if (!sellerId) {
+      console.log(`   ⚠️ Skipped menu "${menu.name}" - seller not found`);
+      continue;
+    }
     await prisma.menu.create({
-      data: menu,
+      data: {
+        name: menu.name,
+        description: menu.description,
+        price: menu.price,
+        status: menu.status,
+        sellerId: sellerId,
+      },
     });
-    console.log(`   ✅ Created menu: ${menu.name}`);
+    console.log(`   ✅ Created menu: ${menu.name} (by ${menu.sellerEmail.split("@")[0]})`);
   }
   console.log("");
 

@@ -44,9 +44,9 @@ export default function AdminNavbar({ userName }: { userName: string }) {
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="flex h-16 items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-emerald-500/10">
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-orange-500/10">
               <svg
-                className="h-5 w-5 text-emerald-400"
+                className="h-5 w-5 text-orange-400"
                 fill="none"
                 viewBox="0 0 24 24"
                 strokeWidth={1.5}
@@ -60,17 +60,17 @@ export default function AdminNavbar({ userName }: { userName: string }) {
               </svg>
             </div>
             <span className="text-lg font-bold tracking-tight">
-              Nexus<span className="text-emerald-400">Bite</span>
+              Nexus<span className="text-orange-400">Bite</span>
             </span>
           </div>
 
           <div className="flex items-center gap-3">
             <div className="hidden items-center gap-2 rounded-full bg-gray-800/60 px-3 py-1.5 text-sm text-gray-400 sm:flex">
-              <div className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
+              <div className="h-2 w-2 rounded-full bg-orange-400 animate-pulse" />
               Admin
             </div>
             <div className="flex items-center gap-2">
-              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-500/20 text-sm font-semibold text-emerald-400">
+              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-orange-500/20 text-sm font-semibold text-orange-400">
                 {initials}
               </div>
               <span className="hidden sm:block text-sm text-gray-300">
@@ -101,7 +101,7 @@ export default function AdminNavbar({ userName }: { userName: string }) {
                 href={link.href}
                 className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                   isActive
-                    ? "bg-emerald-500/20 text-emerald-400"
+                    ? "bg-orange-500/20 text-orange-400"
                     : "text-gray-400 hover:text-white hover:bg-gray-800/50"
                 }`}
               >
