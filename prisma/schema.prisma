@@ -12,8 +12,9 @@ datasource db {
 // ==================== ENUMS ====================
 
 enum Role {
+  SISWA
+  PENJUAL
   ADMIN
-  USER
 }
 
 enum MenuStatus {
@@ -36,13 +37,15 @@ enum OrderStatus {
 // ==================== MODELS ====================
 
 model User {
-  id        String   @id @default(cuid())
-  name      String
-  email     String   @unique
-  role      Role     @default(USER)
-  balance   Int      @default(0)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id         String   @id @default(cuid())
+  name       String
+  email      String   @unique
+  password   String
+  role       Role     @default(SISWA)
+  isApproved Boolean  @default(false) // Untuk PENJUAL: perlu disetujui admin
+  balance    Int      @default(0)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 
   orders Order[]
 

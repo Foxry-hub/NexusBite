@@ -1,4 +1,7 @@
 {
-  "/admin/menu/page": "app/admin/menu/page.js",
-  "/api/admin/menu/route": "app/api/admin/menu/route.js"
+  "/api/auth/login/route": "app/api/auth/login/route.js",
+  "/api/auth/logout/route": "app/api/auth/logout/route.js",
+  "/dashboard/penjual/page": "app/dashboard/penjual/page.js",
+  "/login/page": "app/login/page.js",
+  "/page": "app/page.js"
 }
