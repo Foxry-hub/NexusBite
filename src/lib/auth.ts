@@ -10,6 +10,7 @@ export type SessionUser = {
   email: string;
   role: "SISWA" | "PENJUAL" | "ADMIN";
   balance: number;
+  profilePhoto?: string | null;
 };
 
 // Hash password
@@ -62,6 +63,7 @@ export async function getSessionUser(): Promise<SessionUser | null> {
         email: true,
         role: true,
         balance: true,
+        profilePhoto: true,
       },
     });
 

@@ -291,30 +291,92 @@ export default function OrdersPage() {
                     <p className="text-sm text-neutral-400">{completedOrders.length} pesanan selesai</p>
                   </div>
                 </div>
-                <div className="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
                   {completedOrders.map((order) => {
                     const statusConfig = getStatusConfig(order.status);
                     return (
                       <div
                         key={order.id}
                         onClick={() => setSelectedOrder(order)}
-                        className="bg-neutral-900/30 border border-neutral-800/50 rounded-xl p-5 cursor-pointer hover:bg-neutral-900/50 hover:border-neutral-700 transition-all"
+                        className="bg-neutral-900/50 border border-neutral-800 rounded-2xl overflow-hidden cursor-pointer hover:bg-neutral-900 hover:border-neutral-700 transition-all group"
                       >
-                        <div className="flex items-center justify-between mb-3">
-                          <span className={`${statusConfig.color} text-xs font-medium`}>
-                            {statusConfig.label}
-                          </span>
-                          <span className="text-neutral-500 text-xs flex items-center gap-1">
-                            <Calendar className="w-3 h-3" />
-                            {formatShortDate(order.createdAt)}
-                          </span>
+                        {/* Product Images Header */}
+                        <div className="relative h-32 bg-neutral-800/50">
+                          {order.items.length > 0 && order.items[0].menu.image ? (
+                            <div className="absolute inset-0 grid grid-cols-2 gap-0.5">
+                              {order.items.slice(0, 4).map((item, idx) => (
+                                <div 
+                                  key={item.id} 
+                                  className={`relative overflow-hidden ${order.items.length === 1 ? 'col-span-2 row-span-2' : ''} ${order.items.length === 2 ? 'row-span-2' : ''} ${order.items.length === 3 && idx === 0 ? 'row-span-2' : ''}`}
+                                >
+                                  {item.menu.image ? (
+                                    <img 
+                                      src={item.menu.image} 
+                                      alt={item.menu.name} 
+                                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" 
+                                    />
+                                  ) : (
+                                    <div className="w-full h-full bg-neutral-800 flex items-center justify-center">
+                                      <Utensils className="w-8 h-8 text-neutral-600" />
+                                    </div>
+                                  )}
+                                </div>
+                              ))}
+                              {order.items.length > 4 && (
+                                <div className="absolute bottom-2 right-2 bg-black/70 backdrop-blur-sm px-2 py-1 rounded-lg text-xs text-white font-medium">
+                                  +{order.items.length - 4} lainnya
+                                </div>
+                              )}
+                            </div>
+                          ) : (
+                            <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-neutral-800 to-neutral-900">
+                              <div className="text-center">
+                                <Utensils className="w-10 h-10 text-neutral-600 mx-auto mb-2" />
+                                <p className="text-neutral-500 text-xs">{order.items.length} item</p>
+                              </div>
+                            </div>
+                          )}
+                          {/* Status Badge */}
+                          <div className="absolute top-3 left-3">
+                            <span className={`inline-flex items-center gap-1.5 ${statusConfig.bg} ${statusConfig.color} text-xs font-medium px-2.5 py-1 rounded-full backdrop-blur-sm`}>
+                              <CheckCircle className="w-3 h-3" />
+                              {statusConfig.label}
+                            </span>
+                          </div>
+                          {/* Date Badge */}
+                          <div className="absolute top-3 right-3">
+                            <span className="bg-black/50 backdrop-blur-sm text-white text-xs px-2.5 py-1 rounded-full flex items-center gap-1">
+                              <Calendar className="w-3 h-3" />
+                              {formatShortDate(order.createdAt)}
+                            </span>
+                          </div>
                         </div>
-                        <p className="text-neutral-300 text-sm mb-2">
-                          {order.items.length} item • {order.pickupTime === "BREAK_1" ? "Ist. 1" : "Ist. 2"}
-                        </p>
-                        <p className="text-orange-400/80 font-semibold">
-                          {formatPrice(order.totalAmount)}
-                        </p>
+
+                        {/* Card Content */}
+                        <div className="p-4">
+                          {/* Items List Preview */}
+                          <div className="mb-3">
+                            <p className="text-white text-sm font-medium line-clamp-1">
+                              {order.items.map(item => item.menu.name).join(", ")}
+                            </p>
+                            <p className="text-neutral-500 text-xs mt-1">
+                              {order.items.reduce((acc, item) => acc + item.quantity, 0)} item • {order.pickupTime === "BREAK_1" ? "Istirahat 1" : "Istirahat 2"}
+                            </p>
+                          </div>
+
+                          {/* Footer */}
+                          <div className="flex items-center justify-between pt-3 border-t border-neutral-800">
+                            <span className="text-orange-400 font-bold">
+                              {formatPrice(order.totalAmount)}
+                            </span>
+                            <span className="text-xs text-neutral-500 group-hover:text-orange-400 transition-colors flex items-center gap-1">
+                              Lihat Detail
+                              <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                              </svg>
+                            </span>
+                          </div>
+                        </div>
                       </div>
                     );
                   })}

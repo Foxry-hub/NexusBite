@@ -15,6 +15,7 @@ import {
   LogOut,
   ChefHat,
   Store,
+  UserCircle,
 } from "lucide-react";
 
 interface NavLink {
@@ -29,6 +30,7 @@ interface SidebarProps {
     email: string;
     role: string;
     balance?: number;
+    profilePhoto?: string | null;
   };
   role: "SISWA" | "PENJUAL" | "ADMIN";
 }
@@ -39,6 +41,7 @@ const roleConfigs = {
     links: [
       { href: "/dashboard/siswa", label: "Beranda", icon: Home },
       { href: "/dashboard/siswa/orders", label: "Pesanan Saya", icon: ShoppingBag },
+      { href: "/dashboard/siswa/profile", label: "Profile Saya", icon: UserCircle },
     ],
   },
   PENJUAL: {
@@ -118,9 +121,17 @@ export default function Sidebar({ user, role }: SidebarProps) {
       <div className="p-4 border-b border-neutral-800">
         <div className="bg-neutral-800/50 rounded-xl p-4">
           <div className="flex items-center gap-3 mb-3">
-            <div className="w-10 h-10 bg-gradient-to-br from-orange-500 to-amber-600 rounded-full flex items-center justify-center text-white font-semibold text-sm">
-              {initials}
-            </div>
+            {user.profilePhoto ? (
+              <img 
+                src={user.profilePhoto} 
+                alt={user.name}
+                className="w-10 h-10 rounded-full object-cover border-2 border-orange-500/50"
+              />
+            ) : (
+              <div className="w-10 h-10 bg-gradient-to-br from-orange-500 to-amber-600 rounded-full flex items-center justify-center text-white font-semibold text-sm">
+                {initials}
+              </div>
+            )}
             <div className="flex-1 min-w-0">
               <p className="text-white font-medium text-sm truncate">{user.name}</p>
               <p className="text-neutral-500 text-xs truncate">{config.subtitle}</p>
