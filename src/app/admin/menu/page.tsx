@@ -118,7 +118,7 @@ export default function AdminMenuPage() {
         return (
             <div>
                 <div className="mb-6">
-                    <h1 className="text-2xl font-bold tracking-tight text-gray-100">
+                    <h1 className="text-2xl font-bold tracking-tight text-white">
                         Semua Menu
                     </h1>
                     <p className="mt-1 text-sm text-gray-500">
@@ -134,7 +134,7 @@ export default function AdminMenuPage() {
         <div>
             {/* Page Header */}
             <div className="mb-6">
-                <h1 className="text-2xl font-bold tracking-tight text-gray-100">
+                <h1 className="text-2xl font-bold tracking-tight text-white">
                     Semua Menu
                 </h1>
                 <p className="mt-1 text-sm text-gray-500">
@@ -163,7 +163,7 @@ export default function AdminMenuPage() {
                         <p className="text-xs font-medium uppercase tracking-wider text-neutral-500">
                             Total Menu
                         </p>
-                        <p className="mt-1 text-2xl font-bold text-gray-100">
+                        <p className="mt-1 text-2xl font-bold text-orange-400">
                             {menus.length}
                         </p>
                     </div>
@@ -243,7 +243,7 @@ export default function AdminMenuPage() {
                                             )}
                                             <div className="min-w-0 flex-1">
                                                 <div className="flex items-start justify-between gap-2">
-                                                    <p className="truncate font-semibold text-gray-100">
+                                                    <p className="truncate font-semibold text-orange-400">
                                                         {menu.name}
                                                     </p>
                                                     <StatusBadge status={menu.status} />

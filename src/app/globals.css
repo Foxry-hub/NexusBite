@@ -1,16 +1,120 @@
 @import "tailwindcss";
 
-:root {
+/* Smooth scroll behavior */
+html {
+  scroll-behavior: smooth;
+  scroll-padding-top: 80px; /* Offset for fixed navbar */
+}
+
+/* Scroll margin for sections targeted by anchor links */
+section[id] {
+  scroll-margin-top: 80px;
+}
+
+/* Reduce motion for users who prefer it */
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  
+  /* Also disable animations */
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Dark theme (default) */
+:root,
+[data-theme="dark"] {
   --background: #0a0a0a;
+  --background-secondary: #171717;
+  --background-tertiary: #262626;
   --foreground: #f8fafc;
+  --foreground-secondary: #a1a1aa;
   --accent: #f97316;
   --accent-light: #fb923c;
+  --border: #262626;
+  --card: rgba(23, 23, 23, 0.5);
+  --card-hover: rgba(23, 23, 23, 0.8);
+}
+
+/* Light theme */
+[data-theme="light"] {
+  --background: #ffffff;
+  --background-secondary: #f8fafc;
+  --background-tertiary: #f1f5f9;
+  --foreground: #0f172a;
+  --foreground-secondary: #64748b;
+  --accent: #ea580c;
+  --accent-light: #f97316;
+  --border: #e2e8f0;
+  --card: rgba(248, 250, 252, 0.8);
+  --card-hover: rgba(241, 245, 249, 0.9);
+}
+
+/* Theme transition for smooth switching */
+.theme-transition,
+.theme-transition *,
+.theme-transition *::before,
+.theme-transition *::after {
+  transition: background-color 0.4s ease, 
+              border-color 0.4s ease, 
+              color 0.3s ease,
+              box-shadow 0.3s ease !important;
 }
 
 body {
   color: var(--foreground);
   background: var(--background);
   font-family: var(--font-inter), Arial, Helvetica, sans-serif;
+}
+
+/* Light mode specific overrides */
+[data-theme="light"] .bg-neutral-950 {
+  background-color: var(--background) !important;
+}
+
+[data-theme="light"] .bg-neutral-900 {
+  background-color: var(--background-secondary) !important;
+}
+
+[data-theme="light"] .bg-neutral-900\/50,
+[data-theme="light"] .bg-neutral-900\/30 {
+  background-color: var(--background-tertiary) !important;
+}
+
+[data-theme="light"] .bg-neutral-800,
+[data-theme="light"] .bg-neutral-800\/50,
+[data-theme="light"] .bg-neutral-800\/30 {
+  background-color: var(--background-tertiary) !important;
+}
+
+[data-theme="light"] .border-neutral-800,
+[data-theme="light"] .border-neutral-700 {
+  border-color: var(--border) !important;
+}
+
+[data-theme="light"] .text-white {
+  color: var(--foreground) !important;
+}
+
+[data-theme="light"] .text-neutral-300,
+[data-theme="light"] .text-neutral-400 {
+  color: var(--foreground-secondary) !important;
+}
+
+[data-theme="light"] .text-neutral-500 {
+  color: #94a3b8 !important;
+}
+
+/* Navbar light mode */
+[data-theme="light"] nav.bg-neutral-950\/80 {
+  background-color: rgba(255, 255, 255, 0.9) !important;
+  backdrop-filter: blur(12px);
 }
 
 /* Modal slide-up animation */
@@ -141,14 +245,461 @@ body {
 }
 
 ::-webkit-scrollbar-track {
-  background: #171717;
+  background: var(--background-secondary);
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #404040;
+  background: var(--border);
   border-radius: 4px;
 }
 
+/* Hide scrollbar utility */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
 ::-webkit-scrollbar-thumb:hover {
-  background: #525252;
+  background: var(--foreground-secondary);
+}
+
+/* Carousel Animation */
+@keyframes scroll {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+.animate-scroll {
+  animation: scroll 30s linear infinite;
+}
+
+.animate-scroll:hover {
+  animation-play-state: paused;
+}
+
+/* Floating animation */
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0px) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-20px) rotate(2deg);
+  }
+}
+
+.animate-float {
+  animation: float 6s ease-in-out infinite;
+}
+
+.animate-float-delay-1 {
+  animation: float 6s ease-in-out infinite 1s;
+}
+
+.animate-float-delay-2 {
+  animation: float 6s ease-in-out infinite 2s;
+}
+
+/* Pulse glow animation */
+@keyframes pulse-glow {
+  0%, 100% {
+    box-shadow: 0 0 20px rgba(249, 115, 22, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 40px rgba(249, 115, 22, 0.6);
+  }
+}
+
+.animate-pulse-glow {
+  animation: pulse-glow 3s ease-in-out infinite;
+}
+
+/* Gradient text animation */
+@keyframes gradient-shift {
+  0%, 100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+}
+
+.animate-gradient {
+  background-size: 200% 200%;
+  animation: gradient-shift 4s ease infinite;
+}
+
+/* Blob animation for background */
+@keyframes blob {
+  0%, 100% {
+    transform: translate(0, 0) scale(1);
+  }
+  25% {
+    transform: translate(20px, -30px) scale(1.1);
+  }
+  50% {
+    transform: translate(-20px, 20px) scale(0.9);
+  }
+  75% {
+    transform: translate(30px, 10px) scale(1.05);
+  }
+}
+
+.animate-blob {
+  animation: blob 10s ease-in-out infinite;
+}
+
+.animate-blob-delay-2 {
+  animation: blob 10s ease-in-out infinite 2s;
+}
+
+.animate-blob-delay-4 {
+  animation: blob 10s ease-in-out infinite 4s;
+}
+
+/* ===== DASHBOARD LIGHT MODE OVERRIDES ===== */
+
+/* Sidebar */
+[data-theme="light"] aside.bg-neutral-900\/50 {
+  background-color: rgba(248, 250, 252, 0.95) !important;
+  border-color: var(--border) !important;
+}
+
+[data-theme="light"] .bg-neutral-800\/50,
+[data-theme="light"] .bg-neutral-800\/30 {
+  background-color: rgba(241, 245, 249, 0.8) !important;
+}
+
+/* Main content area */
+[data-theme="light"] .min-h-screen.bg-neutral-950 {
+  background-color: var(--background) !important;
+}
+
+[data-theme="light"] main.bg-neutral-950 {
+  background-color: var(--background) !important;
+}
+
+/* Header */
+[data-theme="light"] header.bg-neutral-950\/80 {
+  background-color: rgba(255, 255, 255, 0.9) !important;
+  backdrop-filter: blur(12px);
+}
+
+/* Cards and containers */
+[data-theme="light"] .bg-neutral-900\/50,
+[data-theme="light"] .bg-neutral-900\/30 {
+  background-color: rgba(248, 250, 252, 0.9) !important;
+}
+
+[data-theme="light"] .bg-gradient-to-br.from-neutral-900 {
+  background: linear-gradient(to bottom right, #f8fafc, #f1f5f9) !important;
+}
+
+[data-theme="light"] .bg-gradient-to-br.from-neutral-800.to-neutral-900 {
+  background: linear-gradient(to bottom right, #f1f5f9, #e2e8f0) !important;
+}
+
+[data-theme="light"] .bg-gradient-to-br.from-neutral-800.to-neutral-800\/50 {
+  background: linear-gradient(to bottom right, #f1f5f9, rgba(241, 245, 249, 0.5)) !important;
+}
+
+/* Input fields */
+[data-theme="light"] input.bg-neutral-900\/50 {
+  background-color: rgba(248, 250, 252, 0.9) !important;
+  border-color: var(--border) !important;
+  color: var(--foreground) !important;
+}
+
+[data-theme="light"] input::placeholder {
+  color: #94a3b8 !important;
+}
+
+/* Buttons - tabs and category buttons */
+[data-theme="light"] button.bg-neutral-800\/50 {
+  background-color: rgba(241, 245, 249, 0.9) !important;
+  color: #64748b !important;
+}
+
+[data-theme="light"] button.bg-neutral-800\/50:hover {
+  background-color: #e2e8f0 !important;
+  color: var(--foreground) !important;
+}
+
+[data-theme="light"] button.bg-neutral-800 {
+  background-color: #e2e8f0 !important;
+}
+
+[data-theme="light"] button.bg-neutral-800:hover {
+  background-color: #cbd5e1 !important;
+}
+
+/* Menu cards */
+[data-theme="light"] .bg-neutral-900.border-neutral-800 {
+  background-color: #ffffff !important;
+  border-color: var(--border) !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1) !important;
+}
+
+[data-theme="light"] .bg-gradient-to-br.from-neutral-800.to-neutral-900 {
+  background: linear-gradient(to bottom right, #f1f5f9, #e2e8f0) !important;
+}
+
+/* Gradient text should stay visible */
+[data-theme="light"] .bg-gradient-to-r.from-orange-400.to-amber-400.bg-clip-text {
+  color: transparent !important;
+}
+
+/* Table & grid items */
+[data-theme="light"] .divide-neutral-800 > * + * {
+  border-color: var(--border) !important;
+}
+
+/* Status badges */
+[data-theme="light"] .bg-green-500\/20 {
+  background-color: rgba(34, 197, 94, 0.15) !important;
+}
+
+[data-theme="light"] .bg-yellow-500\/20 {
+  background-color: rgba(234, 179, 8, 0.15) !important;
+}
+
+[data-theme="light"] .bg-red-500\/20 {
+  background-color: rgba(239, 68, 68, 0.15) !important;
+}
+
+[data-theme="light"] .bg-blue-500\/20 {
+  background-color: rgba(59, 130, 246, 0.15) !important;
+}
+
+/* Orange accent backgrounds */
+[data-theme="light"] .bg-orange-500\/20 {
+  background-color: rgba(249, 115, 22, 0.12) !important;
+}
+
+[data-theme="light"] .bg-orange-500\/10 {
+  background-color: rgba(249, 115, 22, 0.08) !important;
+}
+
+/* Cart panel / Modal */
+[data-theme="light"] .bg-neutral-900.border-l {
+  background-color: #ffffff !important;
+  border-color: var(--border) !important;
+}
+
+/* Overlay */
+[data-theme="light"] .bg-black\/60 {
+  background-color: rgba(0, 0, 0, 0.4) !important;
+}
+
+/* Dropdown and select */
+[data-theme="light"] select.bg-neutral-800 {
+  background-color: #f1f5f9 !important;
+  border-color: var(--border) !important;
+  color: var(--foreground) !important;
+}
+
+/* Admin tables */
+[data-theme="light"] table {
+  border-color: var(--border) !important;
+}
+
+[data-theme="light"] th {
+  background-color: #f8fafc !important;
+  color: var(--foreground) !important;
+}
+
+[data-theme="light"] td {
+  border-color: var(--border) !important;
+}
+
+/* Loading skeleton */
+[data-theme="light"] .animate-pulse.bg-neutral-800 {
+  background-color: #e2e8f0 !important;
+}
+
+/* Focus rings */
+[data-theme="light"] .focus\:ring-orange-500\/50:focus {
+  --tw-ring-color: rgba(249, 115, 22, 0.3) !important;
+}
+
+/* Border colors */
+[data-theme="light"] .border-orange-500\/20,
+[data-theme="light"] .border-orange-500\/30 {
+  border-color: rgba(249, 115, 22, 0.3) !important;
+}
+
+/* Gradient backgrounds for saldo */
+[data-theme="light"] .bg-gradient-to-r.from-orange-500\/20.to-amber-500\/20 {
+  background: linear-gradient(to right, rgba(249, 115, 22, 0.1), rgba(245, 158, 11, 0.1)) !important;
+}
+
+/* Additional elements */
+[data-theme="light"] .bg-neutral-900 {
+  background-color: #ffffff !important;
+}
+
+[data-theme="light"] div.bg-neutral-950 {
+  background-color: var(--background) !important;
+}
+
+/* Sidebar specific fixes */
+[data-theme="light"] aside .bg-neutral-800\/50 {
+  background-color: rgba(241, 245, 249, 0.95) !important;
+}
+
+[data-theme="light"] aside .bg-neutral-900\/50 {
+  background-color: rgba(248, 250, 252, 0.7) !important;
+}
+
+/* Order cards */
+[data-theme="light"] .border-amber-500\/30,
+[data-theme="light"] .border-orange-500\/30,
+[data-theme="light"] .border-orange-400\/30,
+[data-theme="light"] .border-neutral-500\/30 {
+  border-color: rgba(0, 0, 0, 0.1) !important;
+}
+
+/* Profile cards */
+[data-theme="light"] .bg-neutral-800\/30 {
+  background-color: rgba(241, 245, 249, 0.6) !important;
+}
+
+/* Time cards in sidebar */
+[data-theme="light"] .bg-neutral-900\/50 {
+  background-color: rgba(248, 250, 252, 0.8) !important;
+}
+
+/* Modal backgrounds */
+[data-theme="light"] .bg-neutral-900.rounded-2xl,
+[data-theme="light"] .bg-neutral-900.rounded-xl {
+  background-color: #ffffff !important;
+  border-color: var(--border) !important;
+}
+
+/* Cart sidebar */
+[data-theme="light"] aside.bg-neutral-900 {
+  background-color: #ffffff !important;
+}
+
+/* Hover states */
+[data-theme="light"] .hover\:bg-neutral-800:hover {
+  background-color: #e2e8f0 !important;
+}
+
+[data-theme="light"] .hover\:bg-neutral-800\/50:hover {
+  background-color: rgba(226, 232, 240, 0.8) !important;
+}
+
+[data-theme="light"] .hover\:bg-neutral-700:hover {
+  background-color: #cbd5e1 !important;
+}
+
+/* Stats cards background */
+[data-theme="light"] .bg-amber-500\/20 {
+  background-color: rgba(245, 158, 11, 0.12) !important;
+}
+
+/* Dropdown menus */
+[data-theme="light"] .bg-neutral-800.rounded-xl {
+  background-color: #ffffff !important;
+  border: 1px solid var(--border) !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1) !important;
+}
+
+/* Fixed elements */
+[data-theme="light"] .fixed.bg-neutral-900 {
+  background-color: #ffffff !important;
+}
+
+/* Border fix for all cases */
+[data-theme="light"] [class*="border-neutral-700"],
+[data-theme="light"] [class*="border-neutral-800"] {
+  border-color: var(--border) !important;
+}
+
+/* Active nav links should stay visible */
+[data-theme="light"] .bg-orange-500\/20.text-orange-400 {
+  background-color: rgba(249, 115, 22, 0.15) !important;
+}
+
+/* Text colors in light mode */
+[data-theme="light"] .text-neutral-100 {
+  color: var(--foreground) !important;
+}
+
+[data-theme="light"] .text-neutral-200 {
+  color: var(--foreground) !important;
+}
+
+/* Gray text colors - important for admin pages */
+[data-theme="light"] .text-gray-100 {
+  color: var(--foreground) !important;
+}
+
+[data-theme="light"] .text-gray-200 {
+  color: var(--foreground) !important;
+}
+
+[data-theme="light"] .text-gray-300 {
+  color: #374151 !important;
+}
+
+[data-theme="light"] .text-gray-400 {
+  color: #6b7280 !important;
+}
+
+[data-theme="light"] .text-gray-500 {
+  color: #6b7280 !important;
+}
+
+/* Slate text colors */
+[data-theme="light"] .text-slate-100,
+[data-theme="light"] .text-slate-200 {
+  color: var(--foreground) !important;
+}
+
+/* Ring colors for inputs */
+[data-theme="light"] .ring-neutral-800 {
+  --tw-ring-color: var(--border) !important;
+}
+
+/* Ensure all bright text is readable in light mode */
+[data-theme="light"] .text-zinc-100,
+[data-theme="light"] .text-zinc-200 {
+  color: var(--foreground) !important;
+}
+
+/* Gray/neutral/slate light text → dark in light mode */
+[data-theme="light"] .text-gray-100,
+[data-theme="light"] .text-gray-200,
+[data-theme="light"] .text-neutral-100,
+[data-theme="light"] .text-neutral-200,
+[data-theme="light"] .text-slate-100,
+[data-theme="light"] .text-slate-200 {
+  color: #0f172a !important;
+}
+
+/* Override any text-white in content area */
+[data-theme="light"] main .text-white {
+  color: #0f172a !important;
+}
+
+/* Orange/amber accent colors stay vibrant but slightly darker for light mode readability */
+[data-theme="light"] .text-orange-400 {
+  color: #ea580c !important;
+}
+
+[data-theme="light"] .text-amber-400 {
+  color: #d97706 !important;
+}
+
+[data-theme="light"] .text-red-400 {
+  color: #dc2626 !important;
 }
