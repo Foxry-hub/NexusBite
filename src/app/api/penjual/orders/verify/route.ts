@@ -223,30 +223,60 @@ export async function PATCH(request: NextRequest) {
       );
     }
 
-    // Update order status to COMPLETED
-    const updatedOrder = await prisma.order.update({
-      where: { id: orderId },
-      data: { status: "COMPLETED" },
-      include: {
-        user: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
+    // Update order status to COMPLETED and add balance to seller
+    const updatedOrder = await prisma.$transaction(async (tx) => {
+      // Update order status
+      const completedOrder = await tx.order.update({
+        where: { id: orderId },
+        data: { status: "COMPLETED" },
+        include: {
+          user: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+            },
+          },
+          seller: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
+          items: {
+            include: {
+              menu: true,
+            },
           },
         },
-        items: {
-          include: {
-            menu: true,
+      });
+
+      // Add balance to seller
+      if (completedOrder.sellerId) {
+        await tx.user.update({
+          where: { id: completedOrder.sellerId },
+          data: { balance: { increment: completedOrder.totalAmount } },
+        });
+
+        // Record balance history for seller
+        await tx.balanceHistory.create({
+          data: {
+            userId: completedOrder.sellerId,
+            amount: completedOrder.totalAmount,
+            type: "SALE",
+            note: `Penjualan ${completedOrder.orderNumber || completedOrder.id.slice(0, 8)} - ${completedOrder.user.name}`,
           },
-        },
-      },
+        });
+      }
+
+      return completedOrder;
     });
 
     return NextResponse.json({
       success: true,
       message: "Pesanan berhasil diselesaikan",
       order: updatedOrder,
+      addedBalance: order.totalAmount,
     });
   } catch (error) {
     console.error("Complete order error:", error);

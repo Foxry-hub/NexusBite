@@ -18,6 +18,7 @@ import {
   Key,
   Search,
   AlertCircle,
+  BadgeDollarSign,
 } from "lucide-react";
 import Sidebar from "@/components/Sidebar";
 import { useUserStore } from "@/store/useUserStore";
@@ -95,6 +96,12 @@ export default function PenjualDashboardClient({ initialUser }: { initialUser: {
   const [isVerifying, setIsVerifying] = useState(false);
   const [verifyError, setVerifyError] = useState("");
   const [verifiedOrder, setVerifiedOrder] = useState<Order | null>(null);
+  
+  // Toast notification state
+  const [toast, setToast] = useState<{ show: boolean; amount: number; customerName: string }>({ show: false, amount: 0, customerName: "" });
+  
+  // Notification dropdown state
+  const [showNotifications, setShowNotifications] = useState(false);
 
   useEffect(() => {
     setUser(initialUser as any);
@@ -187,6 +194,9 @@ export default function PenjualDashboardClient({ initialUser }: { initialUser: {
   const completeVerifiedOrder = async () => {
     if (!verifiedOrder) return;
 
+    const customerName = verifiedOrder.user.name;
+    const orderAmount = verifiedOrder.totalAmount;
+
     setIsUpdating(true);
     try {
       const res = await fetch("/api/penjual/orders/verify", {
@@ -195,11 +205,23 @@ export default function PenjualDashboardClient({ initialUser }: { initialUser: {
         body: JSON.stringify({ orderId: verifiedOrder.id }),
       });
 
+      const data = await res.json();
+
       if (res.ok) {
         fetchOrders();
         setVerifiedOrder(null);
         setShowVerifyModal(false);
         setVerifyPin("");
+        
+        // Update user balance in UI
+        if (data.addedBalance) {
+          const newBalance = (currentUser.balance || 0) + data.addedBalance;
+          setUser({ ...currentUser, balance: newBalance } as any);
+          
+          // Show toast notification
+          setToast({ show: true, amount: data.addedBalance, customerName });
+          setTimeout(() => setToast({ show: false, amount: 0, customerName: "" }), 5000);
+        }
       }
     } catch {
       console.error("Failed to complete order");
@@ -241,14 +263,85 @@ export default function PenjualDashboardClient({ initialUser }: { initialUser: {
                 <span className="hidden sm:inline">Verifikasi</span>
               </button>
               {/* Notification Button */}
-              <button className="relative p-3 rounded-xl bg-neutral-800/50 border border-neutral-700 text-neutral-400 hover:text-orange-400 hover:border-orange-500/50 transition-all duration-300">
-                <Bell className="w-5 h-5" />
-                {stats.pending > 0 && (
-                  <span className="absolute -top-2 -right-2 w-6 h-6 bg-orange-500 rounded-full text-xs text-white flex items-center justify-center font-bold animate-pop-in">
-                    {stats.pending}
-                  </span>
+              <div className="relative">
+                <button 
+                  onClick={() => setShowNotifications(!showNotifications)}
+                  className="relative p-3 rounded-xl bg-neutral-800/50 border border-neutral-700 text-neutral-400 hover:text-orange-400 hover:border-orange-500/50 transition-all duration-300"
+                >
+                  <Bell className="w-5 h-5" />
+                  {stats.pending > 0 && (
+                    <span className="absolute -top-2 -right-2 w-6 h-6 bg-orange-500 rounded-full text-xs text-white flex items-center justify-center font-bold animate-pop-in">
+                      {stats.pending}
+                    </span>
+                  )}
+                </button>
+
+                {/* Notification Dropdown */}
+                {showNotifications && (
+                  <>
+                    <div className="fixed inset-0 z-40" onClick={() => setShowNotifications(false)} />
+                    <div className="absolute right-0 top-full mt-2 w-80 bg-neutral-900 border border-neutral-800 rounded-2xl shadow-2xl z-50 overflow-hidden animate-slide-up">
+                      <div className="p-4 border-b border-neutral-800 flex items-center justify-between">
+                        <h3 className="text-white font-semibold">Notifikasi</h3>
+                        {stats.pending > 0 && (
+                          <span className="text-xs bg-orange-500/20 text-orange-400 px-2 py-1 rounded-full">
+                            {stats.pending} baru
+                          </span>
+                        )}
+                      </div>
+                      <div className="max-h-80 overflow-y-auto">
+                        {orders.filter(o => o.status === "PENDING").length > 0 ? (
+                          orders.filter(o => o.status === "PENDING").slice(0, 5).map((order) => (
+                            <div 
+                              key={order.id}
+                              onClick={() => {
+                                setSelectedOrder(order);
+                                setShowNotifications(false);
+                              }}
+                              className="p-4 hover:bg-neutral-800/50 cursor-pointer border-b border-neutral-800/50 last:border-b-0 transition-colors"
+                            >
+                              <div className="flex items-start gap-3">
+                                <div className="w-10 h-10 bg-amber-500/20 rounded-xl flex items-center justify-center flex-shrink-0">
+                                  <Package className="w-5 h-5 text-amber-400" />
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-white text-sm font-medium truncate">
+                                    Pesanan baru dari {order.user.name}
+                                  </p>
+                                  <p className="text-neutral-400 text-xs mt-1">
+                                    {order.items.length} item • {formatPrice(order.totalAmount)}
+                                  </p>
+                                  <p className="text-neutral-500 text-xs mt-1">
+                                    {order.pickupTime === "BREAK_1" ? "Istirahat 1" : "Istirahat 2"}
+                                  </p>
+                                </div>
+                                <span className="text-amber-400 text-xs font-medium">Baru</span>
+                              </div>
+                            </div>
+                          ))
+                        ) : (
+                          <div className="p-8 text-center">
+                            <div className="w-12 h-12 bg-neutral-800 rounded-full flex items-center justify-center mx-auto mb-3">
+                              <Bell className="w-6 h-6 text-neutral-600" />
+                            </div>
+                            <p className="text-neutral-400 text-sm">Tidak ada pesanan baru</p>
+                          </div>
+                        )}
+                      </div>
+                      {orders.filter(o => o.status === "PENDING").length > 5 && (
+                        <div className="p-3 border-t border-neutral-800">
+                          <button 
+                            onClick={() => setShowNotifications(false)}
+                            className="w-full py-2 text-sm text-orange-400 hover:text-orange-300 transition-colors"
+                          >
+                            Lihat semua pesanan
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </>
                 )}
-              </button>
+              </div>
             </div>
           </div>
         </header>
@@ -679,6 +772,35 @@ export default function PenjualDashboardClient({ initialUser }: { initialUser: {
                 </button>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Toast Notification */}
+      {toast.show && (
+        <div className="fixed bottom-6 right-6 z-50 animate-slide-up">
+          <div className="bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-2xl shadow-2xl shadow-green-500/30 p-5 max-w-sm">
+            <div className="flex items-start gap-4">
+              <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center flex-shrink-0">
+                <BadgeDollarSign className="w-7 h-7" />
+              </div>
+              <div className="flex-1">
+                <p className="font-bold text-lg">Pembayaran Diterima!</p>
+                <p className="text-green-100 text-sm mt-1">
+                  {toast.customerName} telah mengambil pesanan
+                </p>
+                <div className="mt-3 bg-white/20 rounded-lg px-3 py-2">
+                  <p className="text-xs text-green-100">Saldo masuk</p>
+                  <p className="font-bold text-xl">{formatPrice(toast.amount)}</p>
+                </div>
+              </div>
+              <button 
+                onClick={() => setToast({ show: false, amount: 0, customerName: "" })}
+                className="p-1 hover:bg-white/20 rounded-lg transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
           </div>
         </div>
       )}
