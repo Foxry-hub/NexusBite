@@ -52,6 +52,14 @@ export async function PATCH(
       where: { id },
       data: { status },
       include: {
+        orderGroup: {
+          select: {
+            id: true,
+            groupNumber: true,
+            pickupTime: true,
+            verificationCode: true,
+          },
+        },
         user: {
           select: {
             id: true,

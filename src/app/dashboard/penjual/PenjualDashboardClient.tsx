@@ -34,13 +34,21 @@ interface OrderItem {
   };
 }
 
+interface OrderGroup {
+  id: string;
+  groupNumber: string;
+  pickupTime: "BREAK_1" | "BREAK_2";
+  verificationCode: string;
+  qrToken: string;
+}
+
 interface Order {
   id: string;
   totalAmount: number;
-  pickupTime: "BREAK_1" | "BREAK_2";
+  orderGroup: OrderGroup;
   status: "PENDING" | "PREPARING" | "READY" | "COMPLETED";
   createdAt: string;
-  user: {
+  user?: {
     id: string;
     name: string;
     email: string;
@@ -194,7 +202,7 @@ export default function PenjualDashboardClient({ initialUser }: { initialUser: {
   const completeVerifiedOrder = async () => {
     if (!verifiedOrder) return;
 
-    const customerName = verifiedOrder.user.name;
+    const customerName = verifiedOrder.user?.name || "Pelanggan";
     const orderAmount = verifiedOrder.totalAmount;
 
     setIsUpdating(true);
@@ -230,7 +238,7 @@ export default function PenjualDashboardClient({ initialUser }: { initialUser: {
     }
   };
 
-  const ordersForTab = orders.filter((o) => o.pickupTime === activeTab && o.status !== "COMPLETED");
+  const ordersForTab = orders.filter((o) => o.orderGroup?.pickupTime === activeTab && o.status !== "COMPLETED");
   const pendingOrders = ordersForTab.filter((o) => o.status === "PENDING");
   const preparingOrders = ordersForTab.filter((o) => o.status === "PREPARING");
   const readyOrders = ordersForTab.filter((o) => o.status === "READY");
@@ -306,13 +314,13 @@ export default function PenjualDashboardClient({ initialUser }: { initialUser: {
                                 </div>
                                 <div className="flex-1 min-w-0">
                                   <p className="text-white text-sm font-medium truncate">
-                                    Pesanan baru dari {order.user.name}
+                                    Pesanan baru dari {order.user?.name || "Pelanggan"}
                                   </p>
                                   <p className="text-neutral-400 text-xs mt-1">
                                     {order.items.length} item • {formatPrice(order.totalAmount)}
                                   </p>
                                   <p className="text-neutral-500 text-xs mt-1">
-                                    {order.pickupTime === "BREAK_1" ? "Istirahat 1" : "Istirahat 2"}
+                                    {order.orderGroup?.pickupTime === "BREAK_1" ? "Istirahat 1" : "Istirahat 2"}
                                   </p>
                                 </div>
                                 <span className="text-amber-400 text-xs font-medium">Baru</span>
@@ -412,9 +420,9 @@ export default function PenjualDashboardClient({ initialUser }: { initialUser: {
             >
               <Clock className="w-4 h-4" />
               Istirahat 1
-              {orders.filter((o) => o.pickupTime === "BREAK_1" && o.status !== "COMPLETED").length > 0 && (
+              {orders.filter((o) => o.orderGroup?.pickupTime === "BREAK_1" && o.status !== "COMPLETED").length > 0 && (
                 <span className={`px-2 py-0.5 rounded-full text-xs ${activeTab === "BREAK_1" ? "bg-white/20" : "bg-orange-500/20 text-orange-400"}`}>
-                  {orders.filter((o) => o.pickupTime === "BREAK_1" && o.status !== "COMPLETED").length}
+                  {orders.filter((o) => o.orderGroup?.pickupTime === "BREAK_1" && o.status !== "COMPLETED").length}
                 </span>
               )}
             </button>
@@ -428,9 +436,9 @@ export default function PenjualDashboardClient({ initialUser }: { initialUser: {
             >
               <Clock className="w-4 h-4" />
               Istirahat 2
-              {orders.filter((o) => o.pickupTime === "BREAK_2" && o.status !== "COMPLETED").length > 0 && (
+              {orders.filter((o) => o.orderGroup?.pickupTime === "BREAK_2" && o.status !== "COMPLETED").length > 0 && (
                 <span className={`px-2 py-0.5 rounded-full text-xs ${activeTab === "BREAK_2" ? "bg-white/20" : "bg-orange-500/20 text-orange-400"}`}>
-                  {orders.filter((o) => o.pickupTime === "BREAK_2" && o.status !== "COMPLETED").length}
+                  {orders.filter((o) => o.orderGroup?.pickupTime === "BREAK_2" && o.status !== "COMPLETED").length}
                 </span>
               )}
             </button>
@@ -549,8 +557,8 @@ export default function PenjualDashboardClient({ initialUser }: { initialUser: {
               {/* Customer Info */}
               <div className="bg-neutral-800/50 rounded-xl p-4">
                 <p className="text-neutral-500 text-xs mb-2">Pemesan</p>
-                <p className="text-white font-medium">{selectedOrder.user.name}</p>
-                <p className="text-neutral-400 text-sm">{selectedOrder.user.email}</p>
+                <p className="text-white font-medium">{selectedOrder.user?.name || "Pelanggan"}</p>
+                <p className="text-neutral-400 text-sm">{selectedOrder.user?.email || "-"}</p>
               </div>
 
               {/* Order Items */}
@@ -714,8 +722,8 @@ export default function PenjualDashboardClient({ initialUser }: { initialUser: {
                   {/* Order Info */}
                   <div className="bg-neutral-800/50 rounded-xl p-4">
                     <p className="text-neutral-500 text-xs mb-2">Pemesan</p>
-                    <p className="text-white font-medium">{verifiedOrder.user.name}</p>
-                    {(verifiedOrder.user as any).kelas && (
+                    <p className="text-white font-medium">{verifiedOrder.user?.name || "Pelanggan"}</p>
+                    {(verifiedOrder.user as any)?.kelas && (
                       <p className="text-neutral-400 text-sm">{(verifiedOrder.user as any).kelas}</p>
                     )}
                   </div>
@@ -837,7 +845,7 @@ function OrderCard({ order, onSelect, onUpdateStatus, isUpdating, animationDelay
         </button>
       </div>
       
-      <p className="text-white font-medium mb-1">{order.user.name}</p>
+      <p className="text-white font-medium mb-1">{order.user?.name || "Pelanggan"}</p>
       <p className="text-neutral-500 text-sm mb-4">
         {order.items.length} item • {formatPrice(order.totalAmount)}
       </p>

@@ -57,6 +57,7 @@ model User {
 
   orders         Order[]              // Pesanan yang dibuat user (sebagai pembeli)
   sellerOrders   Order[] @relation("SellerOrders") // Pesanan yang diterima (sebagai penjual)
+  orderGroups    OrderGroup[]         // Grup pesanan user
   menus          Menu[]               // Menu yang dimiliki penjual
   balanceHistory BalanceHistory[]
 
@@ -81,27 +82,45 @@ model Menu {
   @@map("menus")
 }
 
-model Order {
+// OrderGroup - Mengelompokkan pesanan dari berbagai toko menjadi 1 transaksi
+model OrderGroup {
   id               String      @id @default(cuid())
-  orderNumber      String?     @unique // Format: NXB-XXXX (untuk display)
+  groupNumber      String      @unique // Format: NXB-YYMMDD-XXX (untuk display)
   userId           String
-  sellerId         String?     // ID penjual yang menerima pesanan ini
-  totalAmount      Int
+  totalAmount      Int         // Total semua pesanan dalam grup
   pickupTime       PickupTime
-  status           OrderStatus @default(PENDING)
-  verificationCode String?     // PIN 4 digit untuk verifikasi manual
-  qrToken          String?     @unique // UUID untuk QR Code verification
+  verificationCode String      // PIN 4 digit untuk verifikasi (shared)
+  qrToken          String      @unique // UUID untuk QR Code (shared)
   createdAt        DateTime    @default(now())
   updatedAt        DateTime    @updatedAt
 
-  user   User        @relation(fields: [userId], references: [id], onDelete: Cascade)
-  seller User?       @relation("SellerOrders", fields: [sellerId], references: [id], onDelete: Cascade)
-  items  OrderItem[]
+  user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  orders Order[] // Pesanan per toko dalam grup ini
 
   @@index([userId])
-  @@index([sellerId])
   @@index([qrToken])
   @@index([verificationCode])
+  @@map("order_groups")
+}
+
+model Order {
+  id            String      @id @default(cuid())
+  orderGroupId  String      // Referensi ke OrderGroup
+  userId        String
+  sellerId      String?     // ID penjual yang menerima pesanan ini
+  totalAmount   Int         // Total untuk toko ini saja
+  status        OrderStatus @default(PENDING)
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  orderGroup OrderGroup @relation(fields: [orderGroupId], references: [id], onDelete: Cascade)
+  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  seller     User?      @relation("SellerOrders", fields: [sellerId], references: [id], onDelete: Cascade)
+  items      OrderItem[]
+
+  @@index([orderGroupId])
+  @@index([userId])
+  @@index([sellerId])
   @@map("orders")
 }
 

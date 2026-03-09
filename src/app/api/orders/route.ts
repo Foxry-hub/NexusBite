@@ -3,18 +3,18 @@ import prisma from "@/lib/prisma";
 import { getSessionUser } from "@/lib/auth";
 import { randomUUID } from "crypto";
 
-// Helper function to generate order number (NXB-XXXX)
-async function generateOrderNumber(): Promise<string> {
+// Helper function to generate group number (NXB-YYMMDD-XXX)
+async function generateGroupNumber(): Promise<string> {
   const today = new Date();
   const datePrefix = today.toISOString().slice(2, 10).replace(/-/g, ""); // YYMMDD
   
-  // Get count of orders today for sequential numbering
+  // Get count of order groups today for sequential numbering
   const todayStart = new Date(today);
   todayStart.setHours(0, 0, 0, 0);
   const todayEnd = new Date(todayStart);
   todayEnd.setDate(todayEnd.getDate() + 1);
   
-  const todayOrderCount = await prisma.order.count({
+  const todayGroupCount = await prisma.orderGroup.count({
     where: {
       createdAt: {
         gte: todayStart,
@@ -23,7 +23,7 @@ async function generateOrderNumber(): Promise<string> {
     },
   });
   
-  const sequenceNumber = String(todayOrderCount + 1).padStart(3, "0");
+  const sequenceNumber = String(todayGroupCount + 1).padStart(3, "0");
   return `NXB-${datePrefix}-${sequenceNumber}`;
 }
 
@@ -32,7 +32,7 @@ function generateVerificationCode(): string {
   return String(Math.floor(1000 + Math.random() * 9000));
 }
 
-// GET - Get current user's orders (for Siswa)
+// GET - Get current user's order groups (for Siswa)
 export async function GET() {
   try {
     const user = await getSessionUser();
@@ -40,23 +40,28 @@ export async function GET() {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const orders = await prisma.order.findMany({
+    // Get order groups with all orders and items
+    const orderGroups = await prisma.orderGroup.findMany({
       where: { userId: user.id },
       include: {
-        seller: {
-          select: {
-            id: true,
-            name: true,
-          },
-        },
-        items: {
+        orders: {
           include: {
-            menu: {
+            seller: {
               select: {
                 id: true,
                 name: true,
-                price: true,
-                image: true,
+              },
+            },
+            items: {
+              include: {
+                menu: {
+                  select: {
+                    id: true,
+                    name: true,
+                    price: true,
+                    image: true,
+                  },
+                },
               },
             },
           },
@@ -65,9 +70,9 @@ export async function GET() {
       orderBy: { createdAt: "desc" },
     });
 
-    return NextResponse.json({ orders });
+    return NextResponse.json({ orderGroups });
   } catch (error) {
-    console.error("Get orders error:", error);
+    console.error("Get order groups error:", error);
     return NextResponse.json(
       { error: "Gagal mengambil data pesanan" },
       { status: 500 }
@@ -75,7 +80,7 @@ export async function GET() {
   }
 }
 
-// POST - Create new order(s) (for Siswa) - Split by seller
+// POST - Create new order group with orders per seller (for Siswa)
 export async function POST(request: NextRequest) {
   try {
     const user = await getSessionUser();
@@ -177,8 +182,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Create orders (one per seller) and deduct balance in a transaction
-    const orders = await prisma.$transaction(async (tx) => {
+    // Pre-generate group number BEFORE transaction
+    const groupNumber = await generateGroupNumber();
+    const verificationCode = generateVerificationCode();
+    const qrToken = randomUUID();
+
+    // Create order group and orders in a transaction
+    const orderGroup = await prisma.$transaction(async (tx) => {
       // Deduct balance
       await tx.user.update({
         where: { id: user.id },
@@ -191,13 +201,23 @@ export async function POST(request: NextRequest) {
           userId: user.id,
           amount: -grandTotal,
           type: "PURCHASE",
-          note: `Pembelian ${itemsBySeller.size} pesanan`,
+          note: `Pembelian dari ${itemsBySeller.size} toko`,
+        },
+      });
+
+      // Create order group
+      const newOrderGroup = await tx.orderGroup.create({
+        data: {
+          groupNumber,
+          userId: user.id,
+          totalAmount: grandTotal,
+          pickupTime,
+          verificationCode,
+          qrToken,
         },
       });
 
       // Create separate order for each seller
-      const createdOrders = [];
-
       for (const [sellerId, sellerData] of itemsBySeller) {
         // Calculate total for this seller
         const sellerTotal = sellerData.items.reduce(
@@ -205,21 +225,13 @@ export async function POST(request: NextRequest) {
           0
         );
 
-        // Generate unique identifiers
-        const orderNumber = await generateOrderNumber();
-        const verificationCode = generateVerificationCode();
-        const qrToken = randomUUID();
-
-        const newOrder = await tx.order.create({
+        await tx.order.create({
           data: {
-            orderNumber,
+            orderGroupId: newOrderGroup.id,
             userId: user.id,
             sellerId,
             totalAmount: sellerTotal,
-            pickupTime,
             status: "PENDING",
-            verificationCode,
-            qrToken,
             items: {
               create: sellerData.items.map((item) => ({
                 menuId: item.menuId,
@@ -227,32 +239,37 @@ export async function POST(request: NextRequest) {
               })),
             },
           },
-          include: {
-            seller: {
-              select: {
-                id: true,
-                name: true,
+        });
+      }
+
+      // Return the created order group with all relations
+      return tx.orderGroup.findUnique({
+        where: { id: newOrderGroup.id },
+        include: {
+          orders: {
+            include: {
+              seller: {
+                select: {
+                  id: true,
+                  name: true,
+                },
               },
-            },
-            items: {
-              include: {
-                menu: {
-                  select: {
-                    id: true,
-                    name: true,
-                    price: true,
-                    image: true,
+              items: {
+                include: {
+                  menu: {
+                    select: {
+                      id: true,
+                      name: true,
+                      price: true,
+                      image: true,
+                    },
                   },
                 },
               },
             },
           },
-        });
-
-        createdOrders.push(newOrder);
-      }
-
-      return createdOrders;
+        },
+      });
     });
 
     // Get updated balance
@@ -263,15 +280,16 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      orders, // Array of orders (one per seller)
-      orderCount: orders.length,
+      orderGroup,
+      sellerCount: itemsBySeller.size,
       grandTotal,
       newBalance: updatedUser?.balance || 0,
     });
   } catch (error) {
-    console.error("Create order error:", error);
+    console.error("Create order group error:", error);
+    const errorMessage = error instanceof Error ? error.message : "Gagal membuat pesanan";
     return NextResponse.json(
-      { error: "Gagal membuat pesanan" },
+      { error: errorMessage },
       { status: 500 }
     );
   }

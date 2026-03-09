@@ -1,6 +1,7 @@
 import { PrismaClient } from "@prisma/client";
 import { PrismaMariaDb } from "@prisma/adapter-mariadb";
 
+// Prisma client with OrderGroup support
 const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined;
 };

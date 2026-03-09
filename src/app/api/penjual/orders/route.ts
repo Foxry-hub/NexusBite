@@ -33,6 +33,15 @@ export async function GET() {
     const orders = await prisma.order.findMany({
       where: whereClause,
       include: {
+        orderGroup: {
+          select: {
+            id: true,
+            groupNumber: true,
+            pickupTime: true,
+            verificationCode: true,
+            qrToken: true,
+          },
+        },
         user: {
           select: {
             id: true,
@@ -57,9 +66,9 @@ export async function GET() {
       orderBy: { createdAt: "asc" },
     });
 
-    // Group by pickup time
-    const break1Orders = orders.filter((o) => o.pickupTime === "BREAK_1");
-    const break2Orders = orders.filter((o) => o.pickupTime === "BREAK_2");
+    // Group by pickup time (from orderGroup)
+    const break1Orders = orders.filter((o) => o.orderGroup?.pickupTime === "BREAK_1");
+    const break2Orders = orders.filter((o) => o.orderGroup?.pickupTime === "BREAK_2");
 
     return NextResponse.json({
       orders,

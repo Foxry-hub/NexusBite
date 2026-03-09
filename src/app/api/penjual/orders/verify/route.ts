@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { getSessionUser } from "@/lib/auth";
 
-// POST - Verify order by QR token or PIN code
+// POST - Verify order by QR token or PIN code (finds seller's order within group)
 export async function POST(request: NextRequest) {
   try {
     const user = await getSessionUser();
@@ -15,22 +15,21 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { qrToken, verificationCode, orderId } = body;
+    const { qrToken, verificationCode } = body;
 
-    // Must provide either qrToken, verificationCode, or orderId with PIN
-    if (!qrToken && !verificationCode && !orderId) {
+    // Must provide either qrToken or verificationCode
+    if (!qrToken && !verificationCode) {
       return NextResponse.json(
         { error: "Masukkan QR Code atau PIN verifikasi" },
         { status: 400 }
       );
     }
 
-    // Build query based on what's provided
-    let order;
+    // Find order group by QR token or verification code
+    let orderGroup;
 
     if (qrToken) {
-      // Verify by QR Token
-      order = await prisma.order.findUnique({
+      orderGroup = await prisma.orderGroup.findUnique({
         where: { qrToken },
         include: {
           user: {
@@ -41,44 +40,24 @@ export async function POST(request: NextRequest) {
               kelas: true,
             },
           },
-          items: {
+          orders: {
             include: {
-              menu: {
+              seller: {
                 select: {
                   id: true,
                   name: true,
-                  price: true,
-                  image: true,
                 },
               },
-            },
-          },
-        },
-      });
-    } else if (orderId && verificationCode) {
-      // Verify by Order ID + PIN
-      order = await prisma.order.findFirst({
-        where: {
-          id: orderId,
-          verificationCode,
-        },
-        include: {
-          user: {
-            select: {
-              id: true,
-              name: true,
-              email: true,
-              kelas: true,
-            },
-          },
-          items: {
-            include: {
-              menu: {
-                select: {
-                  id: true,
-                  name: true,
-                  price: true,
-                  image: true,
+              items: {
+                include: {
+                  menu: {
+                    select: {
+                      id: true,
+                      name: true,
+                      price: true,
+                      image: true,
+                    },
+                  },
                 },
               },
             },
@@ -86,21 +65,19 @@ export async function POST(request: NextRequest) {
         },
       });
     } else if (verificationCode) {
-      // Verify by PIN only (search today's orders)
+      // Search today's order groups by PIN
       const today = new Date();
       today.setHours(0, 0, 0, 0);
       const tomorrow = new Date(today);
       tomorrow.setDate(tomorrow.getDate() + 1);
 
-      order = await prisma.order.findFirst({
+      orderGroup = await prisma.orderGroup.findFirst({
         where: {
           verificationCode,
-          sellerId: user.role === "PENJUAL" ? user.id : undefined,
           createdAt: {
             gte: today,
             lt: tomorrow,
           },
-          status: { not: "COMPLETED" },
         },
         include: {
           user: {
@@ -111,14 +88,24 @@ export async function POST(request: NextRequest) {
               kelas: true,
             },
           },
-          items: {
+          orders: {
             include: {
-              menu: {
+              seller: {
                 select: {
                   id: true,
                   name: true,
-                  price: true,
-                  image: true,
+                },
+              },
+              items: {
+                include: {
+                  menu: {
+                    select: {
+                      id: true,
+                      name: true,
+                      price: true,
+                      image: true,
+                    },
+                  },
                 },
               },
             },
@@ -127,42 +114,71 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    if (!order) {
+    if (!orderGroup) {
       return NextResponse.json(
         { error: "Pesanan tidak ditemukan atau PIN salah" },
         { status: 404 }
       );
     }
 
-    // Check if this order belongs to the current seller (for PENJUAL)
-    if (user.role === "PENJUAL" && order.sellerId !== user.id) {
+    // Find the seller's order within this group
+    const sellerOrder = orderGroup.orders.find(
+      (order) => order.sellerId === user.id
+    );
+
+    if (!sellerOrder && user.role === "PENJUAL") {
       return NextResponse.json(
-        { error: "Pesanan ini bukan untuk toko Anda" },
-        { status: 403 }
+        { error: "Tidak ada pesanan untuk toko Anda dalam transaksi ini" },
+        { status: 404 }
       );
     }
 
-    // Check if order is already completed
-    if (order.status === "COMPLETED") {
+    // For admin, return all orders; for seller, return only their order
+    const relevantOrder = user.role === "PENJUAL" ? sellerOrder : orderGroup.orders[0];
+
+    if (!relevantOrder) {
       return NextResponse.json(
-        { error: "Pesanan ini sudah selesai diambil" },
+        { error: "Pesanan tidak ditemukan" },
+        { status: 404 }
+      );
+    }
+
+    // Check if this seller's order is already completed
+    if (relevantOrder.status === "COMPLETED") {
+      return NextResponse.json(
+        { error: "Pesanan Anda dalam transaksi ini sudah selesai diambil" },
         { status: 400 }
       );
     }
 
     return NextResponse.json({
       success: true,
-      order: {
-        id: order.id,
-        orderNumber: order.orderNumber,
-        status: order.status,
-        totalAmount: order.totalAmount,
-        pickupTime: order.pickupTime,
-        verificationCode: order.verificationCode,
-        createdAt: order.createdAt,
-        user: order.user,
-        items: order.items,
+      orderGroup: {
+        id: orderGroup.id,
+        groupNumber: orderGroup.groupNumber,
+        totalAmount: orderGroup.totalAmount,
+        pickupTime: orderGroup.pickupTime,
+        verificationCode: orderGroup.verificationCode,
+        createdAt: orderGroup.createdAt,
+        user: orderGroup.user,
       },
+      // Return only the seller's order for completion
+      order: {
+        id: relevantOrder.id,
+        status: relevantOrder.status,
+        totalAmount: relevantOrder.totalAmount,
+        seller: relevantOrder.seller,
+        items: relevantOrder.items,
+        user: orderGroup.user, // Include user info from order group
+      },
+      // Show all orders in group for context (seller names and status only)
+      allOrders: orderGroup.orders.map((o) => ({
+        id: o.id,
+        sellerName: o.seller?.name,
+        status: o.status,
+        totalAmount: o.totalAmount,
+        isYours: o.sellerId === user.id,
+      })),
     });
   } catch (error) {
     console.error("Verify order error:", error);
@@ -173,7 +189,7 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// PATCH - Complete order after verification
+// PATCH - Complete order after verification (only seller's portion)
 export async function PATCH(request: NextRequest) {
   try {
     const user = await getSessionUser();
@@ -198,6 +214,9 @@ export async function PATCH(request: NextRequest) {
     // Find the order
     const order = await prisma.order.findUnique({
       where: { id: orderId },
+      include: {
+        orderGroup: true,
+      },
     });
 
     if (!order) {
@@ -230,6 +249,7 @@ export async function PATCH(request: NextRequest) {
         where: { id: orderId },
         data: { status: "COMPLETED" },
         include: {
+          orderGroup: true,
           user: {
             select: {
               id: true,
@@ -264,7 +284,7 @@ export async function PATCH(request: NextRequest) {
             userId: completedOrder.sellerId,
             amount: completedOrder.totalAmount,
             type: "SALE",
-            note: `Penjualan ${completedOrder.orderNumber || completedOrder.id.slice(0, 8)} - ${completedOrder.user.name}`,
+            note: `Penjualan ${completedOrder.orderGroup.groupNumber} - ${completedOrder.user.name}`,
           },
         });
       }
