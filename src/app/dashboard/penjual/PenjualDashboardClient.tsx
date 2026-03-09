@@ -14,6 +14,10 @@ import {
   Timer,
   Eye,
   X,
+  QrCode,
+  Key,
+  Search,
+  AlertCircle,
 } from "lucide-react";
 import Sidebar from "@/components/Sidebar";
 import { useUserStore } from "@/store/useUserStore";
@@ -66,7 +70,8 @@ function getStatusConfig(status: Order["status"]) {
     case "PREPARING":
       return { label: "Diproses", color: "text-orange-400", bg: "bg-orange-500/20", border: "border-orange-500/30", next: "READY" as const };
     case "READY":
-      return { label: "Siap Diambil", color: "text-orange-300", bg: "bg-orange-400/20", border: "border-orange-400/30", next: "COMPLETED" as const };
+      // READY tidak bisa langsung COMPLETED dari card - harus verifikasi PIN/QR
+      return { label: "Siap Diambil", color: "text-green-400", bg: "bg-green-500/20", border: "border-green-500/30", next: null };
     case "COMPLETED":
       return { label: "Selesai", color: "text-neutral-400", bg: "bg-neutral-500/20", border: "border-neutral-500/30", next: null };
   }
@@ -83,6 +88,13 @@ export default function PenjualDashboardClient({ initialUser }: { initialUser: {
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [isUpdating, setIsUpdating] = useState(false);
   const [activeTab, setActiveTab] = useState<"BREAK_1" | "BREAK_2">("BREAK_1");
+  
+  // Verification modal state
+  const [showVerifyModal, setShowVerifyModal] = useState(false);
+  const [verifyPin, setVerifyPin] = useState("");
+  const [isVerifying, setIsVerifying] = useState(false);
+  const [verifyError, setVerifyError] = useState("");
+  const [verifiedOrder, setVerifiedOrder] = useState<Order | null>(null);
 
   useEffect(() => {
     setUser(initialUser as any);
@@ -127,9 +139,70 @@ export default function PenjualDashboardClient({ initialUser }: { initialUser: {
         if (selectedOrder?.id === orderId) {
           setSelectedOrder(null);
         }
+        if (verifiedOrder?.id === orderId) {
+          setVerifiedOrder(null);
+          setShowVerifyModal(false);
+        }
       }
     } catch {
       console.error("Failed to update order status");
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  // Verify order by PIN
+  const verifyOrderByPin = async () => {
+    if (!verifyPin || verifyPin.length < 4) {
+      setVerifyError("Masukkan PIN 4 digit");
+      return;
+    }
+
+    setIsVerifying(true);
+    setVerifyError("");
+
+    try {
+      const res = await fetch("/api/penjual/orders/verify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ verificationCode: verifyPin }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || "Pesanan tidak ditemukan");
+      }
+
+      setVerifiedOrder(data.order);
+      setVerifyPin("");
+    } catch (err) {
+      setVerifyError(err instanceof Error ? err.message : "Gagal memverifikasi");
+    } finally {
+      setIsVerifying(false);
+    }
+  };
+
+  // Complete verified order
+  const completeVerifiedOrder = async () => {
+    if (!verifiedOrder) return;
+
+    setIsUpdating(true);
+    try {
+      const res = await fetch("/api/penjual/orders/verify", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ orderId: verifiedOrder.id }),
+      });
+
+      if (res.ok) {
+        fetchOrders();
+        setVerifiedOrder(null);
+        setShowVerifyModal(false);
+        setVerifyPin("");
+      }
+    } catch {
+      console.error("Failed to complete order");
     } finally {
       setIsUpdating(false);
     }
@@ -158,14 +231,25 @@ export default function PenjualDashboardClient({ initialUser }: { initialUser: {
                 Kelola pesanan dan menu kamu
               </p>
             </div>
-            <button className="relative p-3 rounded-xl bg-neutral-800/50 border border-neutral-700 text-neutral-400 hover:text-orange-400 hover:border-orange-500/50 transition-all duration-300">
-              <Bell className="w-5 h-5" />
-              {stats.pending > 0 && (
-                <span className="absolute -top-2 -right-2 w-6 h-6 bg-orange-500 rounded-full text-xs text-white flex items-center justify-center font-bold animate-pop-in">
-                  {stats.pending}
-                </span>
-              )}
-            </button>
+            <div className="flex items-center gap-3">
+              {/* Verify Button */}
+              <button 
+                onClick={() => setShowVerifyModal(true)}
+                className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white font-medium transition-all duration-300 shadow-lg shadow-orange-500/25 hover:shadow-orange-500/40"
+              >
+                <QrCode className="w-5 h-5" />
+                <span className="hidden sm:inline">Verifikasi</span>
+              </button>
+              {/* Notification Button */}
+              <button className="relative p-3 rounded-xl bg-neutral-800/50 border border-neutral-700 text-neutral-400 hover:text-orange-400 hover:border-orange-500/50 transition-all duration-300">
+                <Bell className="w-5 h-5" />
+                {stats.pending > 0 && (
+                  <span className="absolute -top-2 -right-2 w-6 h-6 bg-orange-500 rounded-full text-xs text-white flex items-center justify-center font-bold animate-pop-in">
+                    {stats.pending}
+                  </span>
+                )}
+              </button>
+            </div>
           </div>
         </header>
 
@@ -405,24 +489,196 @@ export default function PenjualDashboardClient({ initialUser }: { initialUser: {
             <div className="p-6 border-t border-neutral-800">
               {(() => {
                 const config = getStatusConfig(selectedOrder.status);
-                return config.next ? (
-                  <button
-                    onClick={() => updateOrderStatus(selectedOrder.id, config.next!)}
-                    disabled={isUpdating}
-                    className="w-full py-4 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white font-bold rounded-xl transition-all duration-300 disabled:opacity-50 hover:shadow-lg hover:shadow-orange-500/30"
-                  >
-                    {isUpdating ? "Memproses..." : `Tandai ${getStatusConfig(config.next).label}`}
-                  </button>
-                ) : (
-                  <button
-                    onClick={() => setSelectedOrder(null)}
-                    className="w-full py-4 bg-neutral-800 hover:bg-neutral-700 text-white font-semibold rounded-xl transition-colors"
-                  >
-                    Tutup
-                  </button>
-                );
+                if (config.next) {
+                  return (
+                    <button
+                      onClick={() => updateOrderStatus(selectedOrder.id, config.next!)}
+                      disabled={isUpdating}
+                      className="w-full py-4 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white font-bold rounded-xl transition-all duration-300 disabled:opacity-50 hover:shadow-lg hover:shadow-orange-500/30"
+                    >
+                      {isUpdating ? "Memproses..." : `Tandai ${getStatusConfig(config.next).label}`}
+                    </button>
+                  );
+                } else if (selectedOrder.status === "READY") {
+                  return (
+                    <div className="space-y-3">
+                      <div className="p-4 bg-green-500/10 border border-green-500/30 rounded-xl text-center">
+                        <p className="text-green-400 text-sm font-medium flex items-center justify-center gap-2">
+                          <QrCode className="w-4 h-4" />
+                          Pesanan siap diambil
+                        </p>
+                        <p className="text-neutral-400 text-xs mt-1">Klik tombol Verifikasi untuk menyelesaikan saat siswa datang</p>
+                      </div>
+                      <button
+                        onClick={() => { setSelectedOrder(null); setShowVerifyModal(true); }}
+                        className="w-full py-4 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white font-bold rounded-xl transition-all duration-300 flex items-center justify-center gap-2"
+                      >
+                        <QrCode className="w-5 h-5" />
+                        Buka Verifikasi
+                      </button>
+                    </div>
+                  );
+                } else {
+                  return (
+                    <button
+                      onClick={() => setSelectedOrder(null)}
+                      className="w-full py-4 bg-neutral-800 hover:bg-neutral-700 text-white font-semibold rounded-xl transition-colors"
+                    >
+                      Tutup
+                    </button>
+                  );
+                }
               })()}
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Verification Modal */}
+      {showVerifyModal && (
+        <div className="fixed inset-0 z-50">
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => { setShowVerifyModal(false); setVerifiedOrder(null); setVerifyPin(""); setVerifyError(""); }} />
+          <div className="absolute inset-x-4 top-1/2 -translate-y-1/2 max-w-md mx-auto bg-neutral-900 border border-neutral-800 rounded-2xl overflow-hidden max-h-[85vh] flex flex-col animate-scale-in">
+            <div className="flex items-center justify-between p-6 border-b border-neutral-800">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-orange-500/20 rounded-xl flex items-center justify-center">
+                  <QrCode className="w-5 h-5 text-orange-400" />
+                </div>
+                <div>
+                  <p className="text-white font-semibold">Verifikasi Pesanan</p>
+                  <p className="text-neutral-500 text-sm">Masukkan PIN dari siswa</p>
+                </div>
+              </div>
+              <button
+                onClick={() => { setShowVerifyModal(false); setVerifiedOrder(null); setVerifyPin(""); setVerifyError(""); }}
+                className="p-2 rounded-xl hover:bg-neutral-800 text-neutral-400 transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-6">
+              {!verifiedOrder ? (
+                // PIN Input View
+                <div className="space-y-6">
+                  <div>
+                    <label className="block text-neutral-400 text-sm mb-3">PIN Verifikasi (4 digit)</label>
+                    <div className="flex gap-3">
+                      <div className="flex-1 relative">
+                        <Key className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-neutral-500" />
+                        <input
+                          type="text"
+                          inputMode="numeric"
+                          maxLength={4}
+                          value={verifyPin}
+                          onChange={(e) => {
+                            const value = e.target.value.replace(/\D/g, "");
+                            setVerifyPin(value);
+                            setVerifyError("");
+                          }}
+                          onKeyDown={(e) => e.key === "Enter" && verifyOrderByPin()}
+                          placeholder="0000"
+                          className="w-full pl-12 pr-4 py-4 bg-neutral-800 border border-neutral-700 rounded-xl text-white text-center text-2xl font-mono tracking-[0.5em] placeholder:text-neutral-600 placeholder:tracking-[0.5em] focus:outline-none focus:border-orange-500 transition-colors"
+                        />
+                      </div>
+                      <button
+                        onClick={verifyOrderByPin}
+                        disabled={isVerifying || verifyPin.length < 4}
+                        className="px-6 py-4 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white font-semibold rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {isVerifying ? (
+                          <div className="w-6 h-6 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                        ) : (
+                          <Search className="w-6 h-6" />
+                        )}
+                      </button>
+                    </div>
+                    {verifyError && (
+                      <div className="mt-3 flex items-center gap-2 text-red-400 text-sm">
+                        <AlertCircle className="w-4 h-4" />
+                        {verifyError}
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="bg-neutral-800/50 rounded-xl p-4">
+                    <p className="text-neutral-400 text-sm">
+                      <span className="text-orange-400 font-medium">Tip:</span> Minta siswa menunjukkan QR Code atau PIN dari halaman pesanan mereka.
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                // Verified Order View
+                <div className="space-y-5">
+                  {/* Success Badge */}
+                  <div className="text-center">
+                    <div className="w-16 h-16 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-3">
+                      <CheckCircle className="w-8 h-8 text-green-400" />
+                    </div>
+                    <p className="text-green-400 font-semibold">Pesanan Ditemukan!</p>
+                  </div>
+
+                  {/* Order Info */}
+                  <div className="bg-neutral-800/50 rounded-xl p-4">
+                    <p className="text-neutral-500 text-xs mb-2">Pemesan</p>
+                    <p className="text-white font-medium">{verifiedOrder.user.name}</p>
+                    {(verifiedOrder.user as any).kelas && (
+                      <p className="text-neutral-400 text-sm">{(verifiedOrder.user as any).kelas}</p>
+                    )}
+                  </div>
+
+                  {/* Order Items */}
+                  <div>
+                    <p className="text-neutral-500 text-xs mb-3">Item Pesanan</p>
+                    <div className="space-y-2">
+                      {verifiedOrder.items.map((item) => (
+                        <div key={item.id} className="flex items-center justify-between bg-neutral-800/30 rounded-xl p-3">
+                          <div className="flex items-center gap-3">
+                            <span className="w-8 h-8 bg-orange-500/20 rounded-lg flex items-center justify-center text-orange-400 text-sm font-bold">
+                              {item.quantity}x
+                            </span>
+                            <span className="text-white text-sm">{item.menu.name}</span>
+                          </div>
+                          <span className="text-neutral-400 text-sm">{formatPrice(item.menu.price * item.quantity)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Total */}
+                  <div className="bg-orange-500/10 border border-orange-500/30 rounded-xl p-4 flex justify-between items-center">
+                    <span className="text-white font-medium">Total</span>
+                    <span className="text-orange-400 font-bold text-xl">{formatPrice(verifiedOrder.totalAmount)}</span>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Footer */}
+            {verifiedOrder && (
+              <div className="p-6 border-t border-neutral-800 space-y-3">
+                <button
+                  onClick={completeVerifiedOrder}
+                  disabled={isUpdating}
+                  className="w-full py-4 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white font-bold rounded-xl transition-all duration-300 disabled:opacity-50 flex items-center justify-center gap-2"
+                >
+                  {isUpdating ? (
+                    <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  ) : (
+                    <>
+                      <CheckCircle className="w-5 h-5" />
+                      Selesaikan Pesanan
+                    </>
+                  )}
+                </button>
+                <button
+                  onClick={() => { setVerifiedOrder(null); setVerifyPin(""); }}
+                  className="w-full py-3 bg-neutral-800 hover:bg-neutral-700 text-neutral-300 font-medium rounded-xl transition-colors"
+                >
+                  Verifikasi Lainnya
+                </button>
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -477,15 +733,20 @@ function OrderCard({ order, onSelect, onUpdateStatus, isUpdating, animationDelay
         )}
       </div>
       
-      {config.next && (
+      {config.next ? (
         <button
           onClick={() => onUpdateStatus(order.id, config.next!)}
           disabled={isUpdating}
           className="w-full py-3 rounded-xl text-sm font-medium transition-all duration-300 disabled:opacity-50 bg-orange-500/20 text-orange-400 hover:bg-orange-500/30 border border-orange-500/30"
         >
-          {order.status === "PENDING" ? "Proses Pesanan" : order.status === "PREPARING" ? "Siap Diambil" : "Selesai"}
+          {order.status === "PENDING" ? "Proses Pesanan" : "Siap Diambil"}
         </button>
-      )}
+      ) : order.status === "READY" ? (
+        <div className="w-full py-3 rounded-xl text-sm font-medium bg-green-500/10 text-green-400 border border-green-500/30 text-center flex items-center justify-center gap-2">
+          <QrCode className="w-4 h-4" />
+          Menunggu siswa verifikasi
+        </div>
+      ) : null}
     </div>
   );
 }

@@ -13,7 +13,13 @@ import {
   X,
   Calendar,
   MapPin,
+  QrCode,
+  Key,
+  Store,
+  Copy,
+  Check,
 } from "lucide-react";
+import { QRCodeSVG } from "qrcode.react";
 
 interface OrderItem {
   id: string;
@@ -28,10 +34,17 @@ interface OrderItem {
 
 interface Order {
   id: string;
+  orderNumber: string;
   totalAmount: number;
   pickupTime: "BREAK_1" | "BREAK_2";
   status: "PENDING" | "PREPARING" | "READY" | "COMPLETED";
+  verificationCode: string;
+  qrToken: string;
   createdAt: string;
+  seller: {
+    id: string;
+    name: string;
+  };
   items: OrderItem[];
 }
 
@@ -106,6 +119,17 @@ export default function OrdersPage() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+  const [copiedPin, setCopiedPin] = useState(false);
+
+  const copyToClipboard = async (text: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedPin(true);
+      setTimeout(() => setCopiedPin(false), 2000);
+    } catch {
+      console.error("Failed to copy");
+    }
+  };
 
   const fetchOrders = useCallback(async () => {
     try {
@@ -215,6 +239,15 @@ export default function OrdersPage() {
                           <span className="text-neutral-500 text-sm">
                             {formatShortDate(order.createdAt)}
                           </span>
+                        </div>
+
+                        {/* Order Number & Seller */}
+                        <div className="mb-4 space-y-2">
+                          <p className="text-orange-400 font-mono text-sm font-bold">{order.orderNumber}</p>
+                          <div className="flex items-center gap-2 text-neutral-400">
+                            <Store className="w-4 h-4 text-neutral-500" />
+                            <span className="text-sm">{order.seller?.name || "Penjual"}</span>
+                          </div>
                         </div>
 
                         {/* Order Info */}
@@ -417,6 +450,53 @@ export default function OrdersPage() {
 
             {/* Modal Content */}
             <div className="flex-1 overflow-y-auto p-6 space-y-5">
+              {/* Order Number & Seller */}
+              <div className="text-center">
+                <p className="text-orange-400 font-mono text-lg font-bold">{selectedOrder.orderNumber}</p>
+                <div className="flex items-center justify-center gap-2 text-neutral-400 mt-1">
+                  <Store className="w-4 h-4" />
+                  <span className="text-sm">{selectedOrder.seller?.name || "Penjual"}</span>
+                </div>
+              </div>
+
+              {/* QR Code & PIN - Only show if not completed */}
+              {selectedOrder.status !== "COMPLETED" && (
+                <div className="bg-neutral-800/50 rounded-2xl p-6 text-center">
+                  <p className="text-neutral-400 text-xs mb-4">Tunjukkan ke penjual saat mengambil pesanan</p>
+                  
+                  {/* QR Code */}
+                  <div className="bg-white rounded-xl p-4 inline-block mb-4">
+                    <QRCodeSVG 
+                      value={selectedOrder.qrToken} 
+                      size={160}
+                      level="H"
+                      includeMargin={false}
+                    />
+                  </div>
+                  
+                  {/* PIN */}
+                  <div className="flex items-center justify-center gap-3">
+                    <div className="flex items-center gap-2 bg-neutral-700/50 rounded-lg px-4 py-2">
+                      <Key className="w-4 h-4 text-orange-400" />
+                      <span className="text-white font-mono text-xl font-bold tracking-widest">
+                        {selectedOrder.verificationCode}
+                      </span>
+                    </div>
+                    <button
+                      onClick={() => copyToClipboard(selectedOrder.verificationCode)}
+                      className="p-2 rounded-lg bg-neutral-700/50 hover:bg-neutral-700 transition-colors"
+                    >
+                      {copiedPin ? (
+                        <Check className="w-5 h-5 text-green-400" />
+                      ) : (
+                        <Copy className="w-5 h-5 text-neutral-400" />
+                      )}
+                    </button>
+                  </div>
+                  <p className="text-neutral-500 text-xs mt-3">PIN Verifikasi</p>
+                </div>
+              )}
+
               {/* Pickup Time */}
               <div className="bg-neutral-800/50 rounded-xl p-4">
                 <p className="text-neutral-400 text-xs mb-1">Waktu Pengambilan</p>
@@ -459,7 +539,7 @@ export default function OrdersPage() {
 
               {/* Order ID */}
               <p className="text-neutral-500 text-xs text-center">
-                Order ID: {selectedOrder.id.slice(0, 8).toUpperCase()} • {formatDate(selectedOrder.createdAt)}
+                {selectedOrder.orderNumber} • {formatDate(selectedOrder.createdAt)}
               </p>
             </div>
 

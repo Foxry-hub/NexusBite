@@ -1,6 +1,36 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { getSessionUser } from "@/lib/auth";
+import { randomUUID } from "crypto";
+
+// Helper function to generate order number (NXB-XXXX)
+async function generateOrderNumber(): Promise<string> {
+  const today = new Date();
+  const datePrefix = today.toISOString().slice(2, 10).replace(/-/g, ""); // YYMMDD
+  
+  // Get count of orders today for sequential numbering
+  const todayStart = new Date(today);
+  todayStart.setHours(0, 0, 0, 0);
+  const todayEnd = new Date(todayStart);
+  todayEnd.setDate(todayEnd.getDate() + 1);
+  
+  const todayOrderCount = await prisma.order.count({
+    where: {
+      createdAt: {
+        gte: todayStart,
+        lt: todayEnd,
+      },
+    },
+  });
+  
+  const sequenceNumber = String(todayOrderCount + 1).padStart(3, "0");
+  return `NXB-${datePrefix}-${sequenceNumber}`;
+}
+
+// Helper function to generate 4-digit PIN
+function generateVerificationCode(): string {
+  return String(Math.floor(1000 + Math.random() * 9000));
+}
 
 // GET - Get current user's orders (for Siswa)
 export async function GET() {
@@ -13,6 +43,12 @@ export async function GET() {
     const orders = await prisma.order.findMany({
       where: { userId: user.id },
       include: {
+        seller: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
         items: {
           include: {
             menu: {
@@ -39,7 +75,7 @@ export async function GET() {
   }
 }
 
-// POST - Create new order (for Siswa)
+// POST - Create new order(s) (for Siswa) - Split by seller
 export async function POST(request: NextRequest) {
   try {
     const user = await getSessionUser();
@@ -72,10 +108,18 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Get menu items and calculate total
+    // Get menu items with seller info
     const menuIds = items.map((item: { menuId: string }) => item.menuId);
     const menus = await prisma.menu.findMany({
       where: { id: { in: menuIds }, status: "AVAILABLE" },
+      include: {
+        seller: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+      },
     });
 
     if (menus.length !== menuIds.length) {
@@ -85,17 +129,36 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Calculate total amount
-    let totalAmount = 0;
-    const orderItems = items.map((item: { menuId: string; quantity: number }) => {
+    // Group items by seller
+    const itemsBySeller: Map<string, { sellerId: string; sellerName: string; items: { menuId: string; quantity: number; price: number }[] }> = new Map();
+
+    for (const item of items as { menuId: string; quantity: number }[]) {
       const menu = menus.find((m) => m.id === item.menuId);
       if (!menu) throw new Error("Menu not found");
-      totalAmount += menu.price * item.quantity;
-      return {
+
+      const sellerId = menu.sellerId;
+      if (!itemsBySeller.has(sellerId)) {
+        itemsBySeller.set(sellerId, {
+          sellerId,
+          sellerName: menu.seller.name,
+          items: [],
+        });
+      }
+
+      itemsBySeller.get(sellerId)!.items.push({
         menuId: item.menuId,
         quantity: item.quantity,
-      };
-    });
+        price: menu.price,
+      });
+    }
+
+    // Calculate total amount across all sellers
+    let grandTotal = 0;
+    for (const [, sellerData] of itemsBySeller) {
+      for (const item of sellerData.items) {
+        grandTotal += item.price * item.quantity;
+      }
+    }
 
     // Check user balance
     const currentUser = await prisma.user.findUnique({
@@ -103,46 +166,93 @@ export async function POST(request: NextRequest) {
       select: { balance: true },
     });
 
-    if (!currentUser || currentUser.balance < totalAmount) {
+    if (!currentUser || currentUser.balance < grandTotal) {
       return NextResponse.json(
-        { 
+        {
           error: "Saldo tidak mencukupi",
-          required: totalAmount,
+          required: grandTotal,
           balance: currentUser?.balance || 0,
         },
         { status: 400 }
       );
     }
 
-    // Create order and deduct balance in a transaction
-    const order = await prisma.$transaction(async (tx) => {
+    // Create orders (one per seller) and deduct balance in a transaction
+    const orders = await prisma.$transaction(async (tx) => {
       // Deduct balance
       await tx.user.update({
         where: { id: user.id },
-        data: { balance: { decrement: totalAmount } },
+        data: { balance: { decrement: grandTotal } },
       });
 
-      // Create order
-      const newOrder = await tx.order.create({
+      // Record balance history for purchase
+      await tx.balanceHistory.create({
         data: {
           userId: user.id,
-          totalAmount,
-          pickupTime,
-          status: "PENDING",
-          items: {
-            create: orderItems,
-          },
-        },
-        include: {
-          items: {
-            include: {
-              menu: true,
-            },
-          },
+          amount: -grandTotal,
+          type: "PURCHASE",
+          note: `Pembelian ${itemsBySeller.size} pesanan`,
         },
       });
 
-      return newOrder;
+      // Create separate order for each seller
+      const createdOrders = [];
+
+      for (const [sellerId, sellerData] of itemsBySeller) {
+        // Calculate total for this seller
+        const sellerTotal = sellerData.items.reduce(
+          (sum, item) => sum + item.price * item.quantity,
+          0
+        );
+
+        // Generate unique identifiers
+        const orderNumber = await generateOrderNumber();
+        const verificationCode = generateVerificationCode();
+        const qrToken = randomUUID();
+
+        const newOrder = await tx.order.create({
+          data: {
+            orderNumber,
+            userId: user.id,
+            sellerId,
+            totalAmount: sellerTotal,
+            pickupTime,
+            status: "PENDING",
+            verificationCode,
+            qrToken,
+            items: {
+              create: sellerData.items.map((item) => ({
+                menuId: item.menuId,
+                quantity: item.quantity,
+              })),
+            },
+          },
+          include: {
+            seller: {
+              select: {
+                id: true,
+                name: true,
+              },
+            },
+            items: {
+              include: {
+                menu: {
+                  select: {
+                    id: true,
+                    name: true,
+                    price: true,
+                    image: true,
+                  },
+                },
+              },
+            },
+          },
+        });
+
+        createdOrders.push(newOrder);
+      }
+
+      return createdOrders;
     });
 
     // Get updated balance
@@ -153,7 +263,9 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      order,
+      orders, // Array of orders (one per seller)
+      orderCount: orders.length,
+      grandTotal,
       newBalance: updatedUser?.balance || 0,
     });
   } catch (error) {

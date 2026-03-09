@@ -28,6 +28,26 @@ export async function PATCH(
       );
     }
 
+    // Check if order exists and belongs to this seller
+    const existingOrder = await prisma.order.findUnique({
+      where: { id },
+    });
+
+    if (!existingOrder) {
+      return NextResponse.json(
+        { error: "Pesanan tidak ditemukan" },
+        { status: 404 }
+      );
+    }
+
+    // Penjual can only update their own orders
+    if (user.role === "PENJUAL" && existingOrder.sellerId !== user.id) {
+      return NextResponse.json(
+        { error: "Anda tidak memiliki akses ke pesanan ini" },
+        { status: 403 }
+      );
+    }
+
     const order = await prisma.order.update({
       where: { id },
       data: { status },
@@ -37,6 +57,7 @@ export async function PATCH(
             id: true,
             name: true,
             email: true,
+            kelas: true,
           },
         },
         items: {

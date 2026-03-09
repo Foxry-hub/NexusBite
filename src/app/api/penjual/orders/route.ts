@@ -1,8 +1,8 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { getSessionUser } from "@/lib/auth";
 
-// GET - Get all orders for Penjual
+// GET - Get orders for current Penjual (filtered by seller)
 export async function GET() {
   try {
     const user = await getSessionUser();
@@ -20,19 +20,25 @@ export async function GET() {
     const tomorrow = new Date(today);
     tomorrow.setDate(tomorrow.getDate() + 1);
 
-    const orders = await prisma.order.findMany({
-      where: {
-        createdAt: {
-          gte: today,
-          lt: tomorrow,
-        },
+    // Filter orders by sellerId (penjual only sees their own orders)
+    // Admin can see all orders
+    const whereClause = {
+      createdAt: {
+        gte: today,
+        lt: tomorrow,
       },
+      ...(user.role === "PENJUAL" ? { sellerId: user.id } : {}),
+    };
+
+    const orders = await prisma.order.findMany({
+      where: whereClause,
       include: {
         user: {
           select: {
             id: true,
             name: true,
             email: true,
+            kelas: true,
           },
         },
         items: {

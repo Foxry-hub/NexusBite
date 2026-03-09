@@ -55,8 +55,9 @@ model User {
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
 
-  orders         Order[]
-  menus          Menu[]           // Menu yang dimiliki penjual
+  orders         Order[]              // Pesanan yang dibuat user (sebagai pembeli)
+  sellerOrders   Order[] @relation("SellerOrders") // Pesanan yang diterima (sebagai penjual)
+  menus          Menu[]               // Menu yang dimiliki penjual
   balanceHistory BalanceHistory[]
 
   @@map("users")
@@ -81,18 +82,26 @@ model Menu {
 }
 
 model Order {
-  id          String      @id @default(cuid())
-  userId      String
-  totalAmount Int
-  pickupTime  PickupTime
-  status      OrderStatus @default(PENDING)
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
+  id               String      @id @default(cuid())
+  orderNumber      String?     @unique // Format: NXB-XXXX (untuk display)
+  userId           String
+  sellerId         String?     // ID penjual yang menerima pesanan ini
+  totalAmount      Int
+  pickupTime       PickupTime
+  status           OrderStatus @default(PENDING)
+  verificationCode String?     // PIN 4 digit untuk verifikasi manual
+  qrToken          String?     @unique // UUID untuk QR Code verification
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
 
-  user  User        @relation(fields: [userId], references: [id], onDelete: Cascade)
-  items OrderItem[]
+  user   User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  seller User?       @relation("SellerOrders", fields: [sellerId], references: [id], onDelete: Cascade)
+  items  OrderItem[]
 
   @@index([userId])
+  @@index([sellerId])
+  @@index([qrToken])
+  @@index([verificationCode])
   @@map("orders")
 }
 
