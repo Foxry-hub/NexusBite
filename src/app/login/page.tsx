@@ -19,9 +19,11 @@ import {
   Clock,
   Wallet,
 } from "lucide-react";
+import { useToast } from "@/components/Toast";
 
 export default function LoginPage() {
   const router = useRouter();
+  const { showToast } = useToast();
   const [isLogin, setIsLogin] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -94,7 +96,7 @@ export default function LoginPage() {
       // Handle pending approval for PENJUAL
       if (data.pendingApproval) {
         setError("");
-        alert(data.message);
+        showToast(data.message, "info", 6000);
         setIsLogin(true);
         setPassword("");
         return;

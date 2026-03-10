@@ -17,6 +17,11 @@ export async function GET() {
     // Only get menus belonging to this seller
     const menus = await prisma.menu.findMany({
       where: { sellerId: user.id },
+      include: {
+        category: {
+          select: { id: true, name: true }
+        }
+      },
       orderBy: { createdAt: "desc" },
     });
 
@@ -43,7 +48,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { name, description, price, image, status } = body;
+    const { name, description, price, image, status, categoryId } = body;
 
     if (!name || !description || !price) {
       return NextResponse.json(
@@ -67,6 +72,7 @@ export async function POST(request: NextRequest) {
         image: image || null,
         status: status || "AVAILABLE",
         sellerId: user.id, // Assign to logged in penjual
+        categoryId: categoryId || null,
       },
     });
 

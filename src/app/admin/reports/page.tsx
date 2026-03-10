@@ -15,6 +15,11 @@ import {
   FileSpreadsheet,
   FileText,
   ChevronDown,
+  Wallet,
+  ArrowDownCircle,
+  XCircle,
+  Banknote,
+  Check,
 } from "lucide-react";
 
 interface OrderItem {
@@ -47,6 +52,35 @@ interface BestSeller {
   revenue: number;
 }
 
+interface Withdrawal {
+  id: string;
+  userId: string;
+  amount: number;
+  adminFee: number;
+  netAmount: number;
+  status: "PENDING" | "APPROVED" | "REJECTED";
+  method: string;
+  note: string | null;
+  adminNote: string | null;
+  processedAt: string | null;
+  createdAt: string;
+  user: {
+    name: string;
+    email: string;
+  };
+}
+
+interface WithdrawalStats {
+  total: number;
+  pending: number;
+  approved: number;
+  rejected: number;
+  totalAmount: number;
+  totalAdminFee: number;
+  totalNetAmount: number;
+  approvedAmount: number;
+}
+
 interface ReportData {
   date: string;
   totalRevenue: number;
@@ -60,6 +94,8 @@ interface ReportData {
   };
   bestSellers: BestSeller[];
   orders: Order[];
+  withdrawals: Withdrawal[];
+  withdrawalStats: WithdrawalStats;
 }
 
 function formatPrice(price: number) {
@@ -89,6 +125,17 @@ function getStatusConfig(status: Order["status"]) {
       return { label: "Siap Diambil", color: "text-orange-300", bg: "bg-orange-400/20", icon: CheckCircle };
     case "COMPLETED":
       return { label: "Selesai", color: "text-neutral-400", bg: "bg-neutral-500/20", icon: CheckCircle };
+  }
+}
+
+function getWithdrawalStatusConfig(status: Withdrawal["status"]) {
+  switch (status) {
+    case "PENDING":
+      return { label: "Menunggu", color: "text-amber-400", bg: "bg-amber-500/20", icon: Clock };
+    case "APPROVED":
+      return { label: "Disetujui", color: "text-green-400", bg: "bg-green-500/20", icon: CheckCircle };
+    case "REJECTED":
+      return { label: "Ditolak", color: "text-red-400", bg: "bg-red-500/20", icon: XCircle };
   }
 }
 
@@ -133,6 +180,14 @@ export default function ReportsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [showExportMenu, setShowExportMenu] = useState(false);
   const exportMenuRef = useRef<HTMLDivElement>(null);
+  
+  // Dropdown states
+  const [showDayDropdown, setShowDayDropdown] = useState(false);
+  const [showMonthDropdown, setShowMonthDropdown] = useState(false);
+  const [showYearDropdown, setShowYearDropdown] = useState(false);
+  const dayDropdownRef = useRef<HTMLDivElement>(null);
+  const monthDropdownRef = useRef<HTMLDivElement>(null);
+  const yearDropdownRef = useRef<HTMLDivElement>(null);
 
   const selectedDate = `${selectedYear}-${String(selectedMonth + 1).padStart(2, "0")}-${String(selectedDay).padStart(2, "0")}`;
   const isToday = selectedDate === today.toISOString().split("T")[0];
@@ -159,6 +214,15 @@ export default function ReportsPage() {
     const handleClickOutside = (e: MouseEvent) => {
       if (exportMenuRef.current && !exportMenuRef.current.contains(e.target as Node)) {
         setShowExportMenu(false);
+      }
+      if (dayDropdownRef.current && !dayDropdownRef.current.contains(e.target as Node)) {
+        setShowDayDropdown(false);
+      }
+      if (monthDropdownRef.current && !monthDropdownRef.current.contains(e.target as Node)) {
+        setShowMonthDropdown(false);
+      }
+      if (yearDropdownRef.current && !yearDropdownRef.current.contains(e.target as Node)) {
+        setShowYearDropdown(false);
       }
     };
     document.addEventListener("mousedown", handleClickOutside);
@@ -202,6 +266,25 @@ export default function ReportsPage() {
       const pickupTime = order.pickupTime === "BREAK_1" ? "Istirahat 1" : "Istirahat 2";
       const statusConfig = getStatusConfig(order.status);
       csvContent += `${idx + 1},"${time}","${order.user.name}","${order.user.email}","${statusConfig.label}","${pickupTime}",${order.items.length},${order.totalAmount}\n`;
+    });
+    csvContent += `\n`;
+    
+    // Withdrawals
+    csvContent += `PENARIKAN SALDO\n`;
+    csvContent += `Ringkasan Penarikan\n`;
+    csvContent += `Total Request,${reportData.withdrawalStats.total}\n`;
+    csvContent += `Total Diajukan,${reportData.withdrawalStats.totalAmount}\n`;
+    csvContent += `Total Potongan Admin,${reportData.withdrawalStats.totalAdminFee}\n`;
+    csvContent += `Total Dicairkan,${reportData.withdrawalStats.totalNetAmount}\n`;
+    csvContent += `Menunggu,${reportData.withdrawalStats.pending}\n`;
+    csvContent += `Disetujui,${reportData.withdrawalStats.approved}\n`;
+    csvContent += `Ditolak,${reportData.withdrawalStats.rejected}\n\n`;
+    csvContent += `Daftar Penarikan\n`;
+    csvContent += `No,Waktu,Nama Penjual,Email,Jumlah,Potongan Admin,Diterima,Status\n`;
+    reportData.withdrawals.forEach((withdrawal, idx) => {
+      const time = new Date(withdrawal.createdAt).toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" });
+      const statusConfig = getWithdrawalStatusConfig(withdrawal.status);
+      csvContent += `${idx + 1},"${time}","${withdrawal.user.name}","${withdrawal.user.email}",${withdrawal.amount},${withdrawal.adminFee},${withdrawal.netAmount},"${statusConfig.label}"\n`;
     });
     
     // Download
@@ -334,6 +417,60 @@ export default function ReportsPage() {
           </table>
         </div>
         
+        <div class="section">
+          <h2>Laporan Penarikan Saldo</h2>
+          <div class="stats-grid" style="grid-template-columns: repeat(4, 1fr); margin-bottom: 15px;">
+            <div class="stat-card">
+              <div class="value" style="color: #22c55e;">${formatPrice(reportData.withdrawalStats.totalNetAmount)}</div>
+              <div class="label">Total Dicairkan</div>
+            </div>
+            <div class="stat-card">
+              <div class="value">${reportData.withdrawalStats.total}</div>
+              <div class="label">Total Request</div>
+            </div>
+            <div class="stat-card">
+              <div class="value">${reportData.withdrawalStats.pending}</div>
+              <div class="label">Menunggu</div>
+            </div>
+            <div class="stat-card">
+              <div class="value" style="color: #ef4444;">${formatPrice(reportData.withdrawalStats.totalAdminFee)}</div>
+              <div class="label">Potongan Admin</div>
+            </div>
+          </div>
+          ${reportData.withdrawals.length > 0 ? `
+          <table>
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Waktu</th>
+                <th>Penjual</th>
+                <th class="text-right">Jumlah</th>
+                <th class="text-right">Potongan</th>
+                <th class="text-right">Diterima</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${reportData.withdrawals.map((w, idx) => {
+                const time = new Date(w.createdAt).toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" });
+                const statusLabel = w.status === "PENDING" ? "Menunggu" : w.status === "APPROVED" ? "Disetujui" : "Ditolak";
+                return `
+                  <tr>
+                    <td>${idx + 1}</td>
+                    <td>${time}</td>
+                    <td>${w.user.name}</td>
+                    <td class="text-right">${formatPrice(w.amount)}</td>
+                    <td class="text-right" style="color: #ef4444;">-${formatPrice(w.adminFee)}</td>
+                    <td class="text-right" style="color: #22c55e;">${formatPrice(w.netAmount)}</td>
+                    <td>${statusLabel}</td>
+                  </tr>
+                `;
+              }).join("")}
+            </tbody>
+          </table>
+          ` : `<p style="text-align: center; color: #999;">Belum ada permintaan penarikan</p>`}
+        </div>
+        
         <div class="footer">
           <p>Dicetak pada ${new Date().toLocaleString("id-ID")} - NexusBite E-Canteen System</p>
         </div>
@@ -374,48 +511,123 @@ export default function ReportsPage() {
         </div>
 
         <div className="flex items-center gap-3 flex-wrap">
-          {/* Date Picker - Dropdowns */}
+          {/* Date Picker - Custom Dropdowns */}
           <div className="flex items-center gap-2 bg-neutral-900/50 border border-neutral-800 rounded-xl p-2">
             <Calendar className="w-4 h-4 text-neutral-400 ml-2" />
             
             {/* Day Dropdown */}
-            <select
-              value={selectedDay}
-              onChange={(e) => setSelectedDay(parseInt(e.target.value))}
-              className="bg-neutral-800 text-white px-3 py-1.5 rounded-lg border border-neutral-700 focus:outline-none focus:border-orange-500 cursor-pointer"
-            >
-              {days.map((day) => (
-                <option key={day} value={day}>
-                  {day}
-                </option>
-              ))}
-            </select>
+            <div className="relative" ref={dayDropdownRef}>
+              <button
+                onClick={() => {
+                  setShowDayDropdown(!showDayDropdown);
+                  setShowMonthDropdown(false);
+                  setShowYearDropdown(false);
+                }}
+                className="flex items-center gap-2 px-3 py-1.5 bg-neutral-800 hover:bg-neutral-700 text-white rounded-lg border border-neutral-700 hover:border-neutral-600 transition-all min-w-[60px] justify-between"
+              >
+                <span className="font-medium">{selectedDay}</span>
+                <ChevronDown className={`w-4 h-4 text-neutral-400 transition-transform duration-200 ${showDayDropdown ? "rotate-180" : ""}`} />
+              </button>
+              {showDayDropdown && (
+                <div className="absolute top-full left-0 mt-2 bg-neutral-900 border border-neutral-700 rounded-xl shadow-xl shadow-black/50 overflow-hidden z-50 min-w-[80px] animate-in fade-in slide-in-from-top-2 duration-200">
+                  <div className="max-h-48 overflow-y-auto py-1 scrollbar-thin scrollbar-thumb-neutral-700 scrollbar-track-transparent">
+                    {days.map((day) => (
+                      <button
+                        key={day}
+                        onClick={() => {
+                          setSelectedDay(day);
+                          setShowDayDropdown(false);
+                        }}
+                        className={`w-full flex items-center justify-between px-3 py-2 text-sm transition-colors ${
+                          selectedDay === day
+                            ? "bg-orange-500/20 text-orange-400"
+                            : "text-neutral-300 hover:bg-neutral-800 hover:text-white"
+                        }`}
+                      >
+                        <span>{day}</span>
+                        {selectedDay === day && <Check className="w-4 h-4" />}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
             
             {/* Month Dropdown */}
-            <select
-              value={selectedMonth}
-              onChange={(e) => setSelectedMonth(parseInt(e.target.value))}
-              className="bg-neutral-800 text-white px-3 py-1.5 rounded-lg border border-neutral-700 focus:outline-none focus:border-orange-500 cursor-pointer"
-            >
-              {months.map((month) => (
-                <option key={month.value} value={month.value}>
-                  {month.label}
-                </option>
-              ))}
-            </select>
+            <div className="relative" ref={monthDropdownRef}>
+              <button
+                onClick={() => {
+                  setShowMonthDropdown(!showMonthDropdown);
+                  setShowDayDropdown(false);
+                  setShowYearDropdown(false);
+                }}
+                className="flex items-center gap-2 px-3 py-1.5 bg-neutral-800 hover:bg-neutral-700 text-white rounded-lg border border-neutral-700 hover:border-neutral-600 transition-all min-w-[110px] justify-between"
+              >
+                <span className="font-medium">{months.find(m => m.value === selectedMonth)?.label}</span>
+                <ChevronDown className={`w-4 h-4 text-neutral-400 transition-transform duration-200 ${showMonthDropdown ? "rotate-180" : ""}`} />
+              </button>
+              {showMonthDropdown && (
+                <div className="absolute top-full left-0 mt-2 bg-neutral-900 border border-neutral-700 rounded-xl shadow-xl shadow-black/50 overflow-hidden z-50 min-w-[140px] animate-in fade-in slide-in-from-top-2 duration-200">
+                  <div className="max-h-64 overflow-y-auto py-1 scrollbar-thin scrollbar-thumb-neutral-700 scrollbar-track-transparent">
+                    {months.map((month) => (
+                      <button
+                        key={month.value}
+                        onClick={() => {
+                          setSelectedMonth(month.value);
+                          setShowMonthDropdown(false);
+                        }}
+                        className={`w-full flex items-center justify-between px-3 py-2 text-sm transition-colors ${
+                          selectedMonth === month.value
+                            ? "bg-orange-500/20 text-orange-400"
+                            : "text-neutral-300 hover:bg-neutral-800 hover:text-white"
+                        }`}
+                      >
+                        <span>{month.label}</span>
+                        {selectedMonth === month.value && <Check className="w-4 h-4" />}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
             
             {/* Year Dropdown */}
-            <select
-              value={selectedYear}
-              onChange={(e) => setSelectedYear(parseInt(e.target.value))}
-              className="bg-neutral-800 text-white px-3 py-1.5 rounded-lg border border-neutral-700 focus:outline-none focus:border-orange-500 cursor-pointer"
-            >
-              {years.map((year) => (
-                <option key={year} value={year}>
-                  {year}
-                </option>
-              ))}
-            </select>
+            <div className="relative" ref={yearDropdownRef}>
+              <button
+                onClick={() => {
+                  setShowYearDropdown(!showYearDropdown);
+                  setShowDayDropdown(false);
+                  setShowMonthDropdown(false);
+                }}
+                className="flex items-center gap-2 px-3 py-1.5 bg-neutral-800 hover:bg-neutral-700 text-white rounded-lg border border-neutral-700 hover:border-neutral-600 transition-all min-w-[90px] justify-between"
+              >
+                <span className="font-medium">{selectedYear}</span>
+                <ChevronDown className={`w-4 h-4 text-neutral-400 transition-transform duration-200 ${showYearDropdown ? "rotate-180" : ""}`} />
+              </button>
+              {showYearDropdown && (
+                <div className="absolute top-full left-0 mt-2 bg-neutral-900 border border-neutral-700 rounded-xl shadow-xl shadow-black/50 overflow-hidden z-50 min-w-[100px] animate-in fade-in slide-in-from-top-2 duration-200">
+                  <div className="max-h-48 overflow-y-auto py-1 scrollbar-thin scrollbar-thumb-neutral-700 scrollbar-track-transparent">
+                    {years.map((year) => (
+                      <button
+                        key={year}
+                        onClick={() => {
+                          setSelectedYear(year);
+                          setShowYearDropdown(false);
+                        }}
+                        className={`w-full flex items-center justify-between px-3 py-2 text-sm transition-colors ${
+                          selectedYear === year
+                            ? "bg-orange-500/20 text-orange-400"
+                            : "text-neutral-300 hover:bg-neutral-800 hover:text-white"
+                        }`}
+                      >
+                        <span>{year}</span>
+                        {selectedYear === year && <Check className="w-4 h-4" />}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Export Button */}
@@ -520,6 +732,59 @@ export default function ReportsPage() {
             </div>
           </div>
 
+          {/* Withdrawal Stats Cards */}
+          <div className="mt-6">
+            <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+              <Wallet className="w-5 h-5 text-orange-400" />
+              Laporan Penarikan Saldo
+            </h2>
+            <div className="grid md:grid-cols-4 gap-4">
+              <div className="bg-gradient-to-br from-green-500/20 to-emerald-500/20 border border-green-500/30 rounded-xl p-4">
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-green-300 text-sm font-medium">Total Dicairkan</p>
+                  <Banknote className="w-5 h-5 text-green-400" />
+                </div>
+                <p className="text-white text-2xl font-bold">{formatPrice(reportData.withdrawalStats.totalNetAmount)}</p>
+                <p className="text-green-400/60 text-xs mt-1">
+                  dari {reportData.withdrawalStats.approved} penarikan
+                </p>
+              </div>
+              
+              <div className="bg-neutral-900/50 border border-neutral-800 rounded-xl p-4">
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-neutral-300 text-sm font-medium">Total Request</p>
+                  <ArrowDownCircle className="w-5 h-5 text-orange-400" />
+                </div>
+                <p className="text-white text-2xl font-bold">{reportData.withdrawalStats.total}</p>
+                <p className="text-neutral-400/60 text-xs mt-1">
+                  {formatPrice(reportData.withdrawalStats.totalAmount)}
+                </p>
+              </div>
+
+              <div className="bg-neutral-900/50 border border-neutral-800 rounded-xl p-4">
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-amber-300 text-sm font-medium">Menunggu</p>
+                  <Clock className="w-5 h-5 text-amber-400" />
+                </div>
+                <p className="text-white text-2xl font-bold">{reportData.withdrawalStats.pending}</p>
+                <p className="text-amber-400/60 text-xs mt-1">
+                  Perlu diproses
+                </p>
+              </div>
+
+              <div className="bg-neutral-900/50 border border-neutral-800 rounded-xl p-4">
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-red-300 text-sm font-medium">Potongan Admin</p>
+                  <Wallet className="w-5 h-5 text-red-400" />
+                </div>
+                <p className="text-white text-2xl font-bold">{formatPrice(reportData.withdrawalStats.totalAdminFee)}</p>
+                <p className="text-red-400/60 text-xs mt-1">
+                  5% dari penarikan
+                </p>
+              </div>
+            </div>
+          </div>
+
           <div className="grid lg:grid-cols-2 gap-6">
             {/* Best Sellers */}
             <div className="bg-neutral-900/50 border border-neutral-800 rounded-xl p-4">
@@ -600,6 +865,68 @@ export default function ReportsPage() {
                 </div>
               )}
             </div>
+          </div>
+
+          {/* Withdrawal List */}
+          <div className="bg-neutral-900/50 border border-neutral-800 rounded-xl p-4">
+            <h2 className="text-white font-semibold mb-4 flex items-center gap-2">
+              <Wallet className="w-5 h-5 text-orange-400" />
+              Permintaan Penarikan Hari Ini
+            </h2>
+            
+            {reportData.withdrawals.length === 0 ? (
+              <div className="text-center py-8 text-neutral-400">
+                <Wallet className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                <p className="text-sm">Belum ada permintaan penarikan</p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b border-neutral-800">
+                      <th className="text-left text-xs font-medium text-neutral-400 py-3 px-2">Waktu</th>
+                      <th className="text-left text-xs font-medium text-neutral-400 py-3 px-2">Penjual</th>
+                      <th className="text-right text-xs font-medium text-neutral-400 py-3 px-2">Jumlah</th>
+                      <th className="text-right text-xs font-medium text-neutral-400 py-3 px-2">Potongan</th>
+                      <th className="text-right text-xs font-medium text-neutral-400 py-3 px-2">Diterima</th>
+                      <th className="text-center text-xs font-medium text-neutral-400 py-3 px-2">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {reportData.withdrawals.map((withdrawal) => {
+                      const statusConfig = getWithdrawalStatusConfig(withdrawal.status);
+                      const StatusIcon = statusConfig.icon;
+                      return (
+                        <tr key={withdrawal.id} className="border-b border-neutral-800/50 hover:bg-neutral-800/30">
+                          <td className="py-3 px-2 text-neutral-400 text-sm">
+                            {new Date(withdrawal.createdAt).toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" })}
+                          </td>
+                          <td className="py-3 px-2">
+                            <p className="text-white text-sm font-medium">{withdrawal.user.name}</p>
+                            <p className="text-neutral-500 text-xs">{withdrawal.user.email}</p>
+                          </td>
+                          <td className="py-3 px-2 text-right text-white text-sm font-medium">
+                            {formatPrice(withdrawal.amount)}
+                          </td>
+                          <td className="py-3 px-2 text-right text-red-400 text-sm">
+                            -{formatPrice(withdrawal.adminFee)}
+                          </td>
+                          <td className="py-3 px-2 text-right text-green-400 text-sm font-medium">
+                            {formatPrice(withdrawal.netAmount)}
+                          </td>
+                          <td className="py-3 px-2 text-center">
+                            <span className={`inline-flex items-center gap-1 ${statusConfig.bg} ${statusConfig.color} text-xs font-medium px-2 py-1 rounded-full`}>
+                              <StatusIcon className="w-3 h-3" />
+                              {statusConfig.label}
+                            </span>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
         </>
       ) : (

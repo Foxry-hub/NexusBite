@@ -12,6 +12,12 @@ export async function GET() {
             name: true,
           },
         },
+        category: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
         orderItems: {
           select: {
             quantity: true,

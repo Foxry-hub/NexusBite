@@ -16,6 +16,7 @@ import {
   ChefHat,
   Store,
   UserCircle,
+  ArrowDownCircle,
 } from "lucide-react";
 import ThemeToggle from "@/components/ThemeToggle";
 
@@ -50,6 +51,7 @@ const roleConfigs = {
     links: [
       { href: "/dashboard/penjual", label: "Beranda", icon: Home },
       { href: "/dashboard/penjual/menu", label: "Kelola Menu", icon: Utensils },
+      { href: "/dashboard/penjual/keuangan", label: "Keuangan", icon: Wallet },
     ],
   },
   ADMIN: {
@@ -58,6 +60,7 @@ const roleConfigs = {
       { href: "/admin/menu", label: "Menu", icon: Utensils },
       { href: "/admin/users", label: "Verifikasi Penjual", icon: Users },
       { href: "/admin/balance", label: "Top-Up Saldo", icon: Wallet },
+      { href: "/admin/withdrawals", label: "Penarikan Saldo", icon: ArrowDownCircle },
       { href: "/admin/reports", label: "Laporan", icon: BarChart3 },
     ],
   },

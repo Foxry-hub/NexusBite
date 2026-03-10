@@ -65,6 +65,8 @@ export default function BalanceTopUpPage() {
   const fetchHistory = useCallback(async () => {
     setIsLoadingHistory(true);
     try {
+      // Add small delay for better UX
+      await new Promise(resolve => setTimeout(resolve, 500));
       const res = await fetch("/api/admin/balance?history=true");
       const data = await res.json();
       setHistory(data.history || []);
@@ -332,7 +334,7 @@ export default function BalanceTopUpPage() {
             <button
               onClick={fetchHistory}
               disabled={isLoadingHistory}
-              className="p-2 rounded-lg hover:bg-neutral-800 text-neutral-400 hover:text-white transition-colors disabled:opacity-50"
+              className="p-2 rounded-lg bg-neutral-800/50 text-neutral-400 hover:text-white hover:bg-neutral-700/50 transition-all disabled:opacity-50"
               title="Refresh"
             >
               <RefreshCw className={`w-4 h-4 ${isLoadingHistory ? "animate-spin" : ""}`} />

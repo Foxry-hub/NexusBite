@@ -1,6 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -9,7 +6,149 @@ datasource db {
   provider = "mysql"
 }
 
-// ==================== ENUMS ====================
+model Category {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String?  @db.Text
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  menus       Menu[]
+
+  @@map("categories")
+}
+
+model User {
+  id             String           @id @default(cuid())
+  name           String
+  email          String           @unique
+  password       String
+  role           Role             @default(SISWA)
+  isApproved     Boolean          @default(false)
+  balance        Int              @default(0)
+  profilePhoto   String?          @db.LongText
+  kelas          String?
+  jurusan        String?
+  tanggalLahir   DateTime?
+  nis            String?          @unique
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  balanceHistory BalanceHistory[]
+  menus          Menu[]
+  orderGroups    OrderGroup[]
+  sellerOrders   Order[]          @relation("SellerOrders")
+  orders         Order[]
+  withdrawals    Withdrawal[]
+
+  @@map("users")
+}
+
+model Menu {
+  id          String      @id @default(cuid())
+  name        String
+  description String      @db.Text
+  price       Int
+  image       String?     @db.LongText
+  status      MenuStatus  @default(AVAILABLE)
+  sellerId    String
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  categoryId  String?
+  category    Category?   @relation(fields: [categoryId], references: [id])
+  seller      User        @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+  orderItems  OrderItem[]
+
+  @@index([sellerId])
+  @@index([categoryId])
+  @@map("menus")
+}
+
+model OrderGroup {
+  id               String     @id @default(cuid())
+  groupNumber      String     @unique
+  userId           String
+  totalAmount      Int
+  pickupTime       PickupTime
+  verificationCode String
+  qrToken          String     @unique
+  createdAt        DateTime   @default(now())
+  updatedAt        DateTime   @updatedAt
+  user             User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  orders           Order[]
+
+  @@index([userId])
+  @@index([qrToken])
+  @@index([verificationCode])
+  @@map("order_groups")
+}
+
+model Order {
+  id           String      @id @default(cuid())
+  orderGroupId String
+  userId       String
+  sellerId     String?
+  totalAmount  Int
+  status       OrderStatus @default(PENDING)
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+  items        OrderItem[]
+  orderGroup   OrderGroup  @relation(fields: [orderGroupId], references: [id], onDelete: Cascade)
+  seller       User?       @relation("SellerOrders", fields: [sellerId], references: [id], onDelete: Cascade)
+  user         User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([orderGroupId])
+  @@index([userId])
+  @@index([sellerId])
+  @@map("orders")
+}
+
+model OrderItem {
+  id       String @id @default(cuid())
+  orderId  String
+  menuId   String
+  quantity Int
+  menu     Menu   @relation(fields: [menuId], references: [id])
+  order    Order  @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([orderId])
+  @@index([menuId])
+  @@map("order_items")
+}
+
+model BalanceHistory {
+  id        String   @id @default(cuid())
+  userId    String
+  amount    Int
+  type      String   @default("TOP_UP")
+  note      String?
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([createdAt])
+  @@map("balance_history")
+}
+
+model Withdrawal {
+  id          String           @id @default(cuid())
+  userId      String
+  amount      Int
+  status      WithdrawalStatus @default(PENDING)
+  method      String           @default("CASH")
+  note        String?          @db.Text
+  adminNote   String?          @db.Text
+  processedAt DateTime?
+  processedBy String?
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  adminFee    Int              @default(0)
+  netAmount   Int              @default(0)
+  user        User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([status])
+  @@index([createdAt])
+  @@map("withdrawals")
+}
 
 enum Role {
   SISWA
@@ -34,121 +173,8 @@ enum OrderStatus {
   COMPLETED
 }
 
-// ==================== MODELS ====================
-
-model User {
-  id           String    @id @default(cuid())
-  name         String
-  email        String    @unique
-  password     String
-  role         Role      @default(SISWA)
-  isApproved   Boolean   @default(false) // Untuk PENJUAL: perlu disetujui admin
-  balance      Int       @default(0)
-  
-  // Profile fields untuk SISWA
-  profilePhoto String?   @db.LongText    // Base64 encoded image
-  kelas        String?                   // Kelas siswa (contoh: XII RPL 1)
-  jurusan      String?                   // Jurusan (contoh: Rekayasa Perangkat Lunak)
-  tanggalLahir DateTime?                 // Tanggal lahir
-  nis          String?   @unique         // Nomor Induk Siswa
-  
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
-
-  orders         Order[]              // Pesanan yang dibuat user (sebagai pembeli)
-  sellerOrders   Order[] @relation("SellerOrders") // Pesanan yang diterima (sebagai penjual)
-  orderGroups    OrderGroup[]         // Grup pesanan user
-  menus          Menu[]               // Menu yang dimiliki penjual
-  balanceHistory BalanceHistory[]
-
-  @@map("users")
-}
-
-model Menu {
-  id          String     @id @default(cuid())
-  name        String
-  description String     @db.Text
-  price       Int
-  image       String?    @db.LongText
-  status      MenuStatus @default(AVAILABLE)
-  sellerId    String     // ID penjual yang memiliki menu ini
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
-
-  seller     User        @relation(fields: [sellerId], references: [id], onDelete: Cascade)
-  orderItems OrderItem[]
-
-  @@index([sellerId])
-  @@map("menus")
-}
-
-// OrderGroup - Mengelompokkan pesanan dari berbagai toko menjadi 1 transaksi
-model OrderGroup {
-  id               String      @id @default(cuid())
-  groupNumber      String      @unique // Format: NXB-YYMMDD-XXX (untuk display)
-  userId           String
-  totalAmount      Int         // Total semua pesanan dalam grup
-  pickupTime       PickupTime
-  verificationCode String      // PIN 4 digit untuk verifikasi (shared)
-  qrToken          String      @unique // UUID untuk QR Code (shared)
-  createdAt        DateTime    @default(now())
-  updatedAt        DateTime    @updatedAt
-
-  user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  orders Order[] // Pesanan per toko dalam grup ini
-
-  @@index([userId])
-  @@index([qrToken])
-  @@index([verificationCode])
-  @@map("order_groups")
-}
-
-model Order {
-  id            String      @id @default(cuid())
-  orderGroupId  String      // Referensi ke OrderGroup
-  userId        String
-  sellerId      String?     // ID penjual yang menerima pesanan ini
-  totalAmount   Int         // Total untuk toko ini saja
-  status        OrderStatus @default(PENDING)
-  createdAt     DateTime    @default(now())
-  updatedAt     DateTime    @updatedAt
-
-  orderGroup OrderGroup @relation(fields: [orderGroupId], references: [id], onDelete: Cascade)
-  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
-  seller     User?      @relation("SellerOrders", fields: [sellerId], references: [id], onDelete: Cascade)
-  items      OrderItem[]
-
-  @@index([orderGroupId])
-  @@index([userId])
-  @@index([sellerId])
-  @@map("orders")
-}
-
-model OrderItem {
-  id       String @id @default(cuid())
-  orderId  String
-  menuId   String
-  quantity Int
-
-  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  menu  Menu  @relation(fields: [menuId], references: [id], onDelete: Restrict)
-
-  @@index([orderId])
-  @@index([menuId])
-  @@map("order_items")
-}
-
-model BalanceHistory {
-  id        String   @id @default(cuid())
-  userId    String
-  amount    Int
-  type      String   @default("TOP_UP") // TOP_UP or PURCHASE
-  note      String?
-  createdAt DateTime @default(now())
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId])
-  @@index([createdAt])
-  @@map("balance_history")
+enum WithdrawalStatus {
+  PENDING
+  APPROVED
+  REJECTED
 }

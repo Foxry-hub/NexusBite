@@ -14,6 +14,8 @@ import {
   CheckCircle,
   Loader2,
   ArrowLeft,
+  ChevronDown,
+  Check,
 } from "lucide-react";
 import Sidebar from "@/components/Sidebar";
 import { useUserStore } from "@/store/useUserStore";
@@ -53,6 +55,7 @@ export default function ProfileClient({
   const [jurusan, setJurusan] = useState("");
   const [tanggalLahir, setTanggalLahir] = useState("");
   const [nis, setNis] = useState("");
+  const [showJurusanDropdown, setShowJurusanDropdown] = useState(false);
 
   // Fetch profile data
   useEffect(() => {
@@ -379,18 +382,51 @@ export default function ProfileClient({
                       <GraduationCap className="w-4 h-4 inline mr-2" />
                       Jurusan
                     </label>
-                    <select
-                      value={jurusan}
-                      onChange={(e) => setJurusan(e.target.value)}
-                      className="w-full px-4 py-3 bg-neutral-800/50 border border-neutral-700 rounded-xl focus:outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500 transition-colors"
-                    >
-                      <option value="">Pilih Jurusan</option>
-                      {jurusanOptions.map((j) => (
-                        <option key={j} value={j}>
-                          {j}
-                        </option>
-                      ))}
-                    </select>
+                    <div className="relative">
+                      <button
+                        type="button"
+                        onClick={() => setShowJurusanDropdown(!showJurusanDropdown)}
+                        className="w-full px-4 py-3 bg-neutral-800/50 border border-neutral-700 rounded-xl focus:outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20 transition-all text-left flex items-center justify-between group hover:bg-neutral-800/70"
+                      >
+                        <span className={jurusan ? "text-white" : "text-neutral-500"}>
+                          {jurusan || "Pilih Jurusan"}
+                        </span>
+                        <ChevronDown className={`w-4 h-4 text-neutral-400 transition-transform duration-200 ${showJurusanDropdown ? "rotate-180" : ""}`} />
+                      </button>
+                      
+                      {showJurusanDropdown && (
+                        <>
+                          <div 
+                            className="fixed inset-0 z-40"
+                            onClick={() => setShowJurusanDropdown(false)}
+                          />
+                          <div className="absolute z-50 w-full bottom-full mb-2 bg-neutral-800 border border-neutral-700 rounded-xl shadow-xl shadow-black/20 overflow-hidden animate-in fade-in slide-in-from-bottom-2 duration-200">
+                            <div className="max-h-60 overflow-y-auto py-1">
+                              {jurusanOptions.map((j) => (
+                                <button
+                                  key={j}
+                                  type="button"
+                                  onClick={() => {
+                                    setJurusan(j);
+                                    setShowJurusanDropdown(false);
+                                  }}
+                                  className={`w-full px-4 py-2.5 text-left flex items-center justify-between transition-colors ${
+                                    jurusan === j
+                                      ? "bg-orange-500/20 text-orange-400"
+                                      : "text-neutral-300 hover:bg-neutral-700/50 hover:text-white"
+                                  }`}
+                                >
+                                  <span className="font-medium">{j}</span>
+                                  {jurusan === j && (
+                                    <Check className="w-4 h-4 text-orange-400" />
+                                  )}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        </>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>

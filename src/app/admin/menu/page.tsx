@@ -1,9 +1,14 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { Store, Utensils, Search } from "lucide-react";
+import { Store, Utensils, Search, Tags } from "lucide-react";
 
 // --- Types ---
+interface Category {
+    id: string;
+    name: string;
+}
+
 interface Menu {
     id: string;
     name: string;
@@ -12,6 +17,8 @@ interface Menu {
     image: string | null;
     status: "AVAILABLE" | "OUT_OF_STOCK";
     createdAt: string;
+    categoryId: string | null;
+    category: Category | null;
     seller: {
         id: string;
         name: string;
@@ -251,6 +258,12 @@ export default function AdminMenuPage() {
                                                 <p className="mt-1 text-sm text-neutral-500 line-clamp-2">
                                                     {menu.description}
                                                 </p>
+                                                {menu.category && (
+                                                    <span className="inline-flex items-center gap-1 text-xs text-orange-400 bg-orange-500/10 px-2 py-0.5 rounded-full mt-2">
+                                                        <Tags className="w-3 h-3" />
+                                                        {menu.category.name}
+                                                    </span>
+                                                )}
                                                 <p className="mt-2 text-sm font-bold text-orange-400">
                                                     {formatRupiah(menu.price)}
                                                 </p>

@@ -89,6 +89,37 @@ export async function GET(request: NextRequest) {
       completed: orders.filter((o) => o.status === "COMPLETED").length,
     };
 
+    // Get withdrawals for the day
+    const withdrawals = await prisma.withdrawal.findMany({
+      where: {
+        createdAt: {
+          gte: date,
+          lt: nextDay,
+        },
+      },
+      include: {
+        user: {
+          select: {
+            name: true,
+            email: true,
+          },
+        },
+      },
+      orderBy: { createdAt: "desc" },
+    });
+
+    // Withdrawal stats
+    const withdrawalStats = {
+      total: withdrawals.length,
+      pending: withdrawals.filter((w) => w.status === "PENDING").length,
+      approved: withdrawals.filter((w) => w.status === "APPROVED").length,
+      rejected: withdrawals.filter((w) => w.status === "REJECTED").length,
+      totalAmount: withdrawals.reduce((sum, w) => sum + w.amount, 0),
+      totalAdminFee: withdrawals.reduce((sum, w) => sum + w.adminFee, 0),
+      totalNetAmount: withdrawals.filter((w) => w.status === "APPROVED").reduce((sum, w) => sum + w.netAmount, 0),
+      approvedAmount: withdrawals.filter((w) => w.status === "APPROVED").reduce((sum, w) => sum + w.amount, 0),
+    };
+
     return NextResponse.json({
       date: date.toISOString().split("T")[0],
       totalRevenue,
@@ -96,6 +127,8 @@ export async function GET(request: NextRequest) {
       orderStats,
       bestSellers,
       orders,
+      withdrawals,
+      withdrawalStats,
     });
   } catch (error) {
     console.error("Get report error:", error);

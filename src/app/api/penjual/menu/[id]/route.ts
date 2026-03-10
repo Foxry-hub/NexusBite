@@ -67,7 +67,7 @@ export async function PATCH(
     }
 
     const body = await request.json();
-    const { name, description, price, image, status } = body;
+    const { name, description, price, image, status, categoryId } = body;
 
     const updateData: Record<string, unknown> = {};
     if (name !== undefined) updateData.name = name;
@@ -75,6 +75,7 @@ export async function PATCH(
     if (price !== undefined) updateData.price = parseInt(price);
     if (image !== undefined) updateData.image = image;
     if (status !== undefined) updateData.status = status;
+    if (categoryId !== undefined) updateData.categoryId = categoryId || null;
 
     const menu = await prisma.menu.update({
       where: { id },

@@ -10,6 +10,8 @@ import {
   LogOut,
   ChefHat,
   Shield,
+  ArrowDownCircle,
+  Tags,
 } from "lucide-react";
 import ThemeToggle from "@/components/ThemeToggle";
 
@@ -23,9 +25,11 @@ interface AdminSidebarProps {
 }
 
 const navLinks = [
+  { href: "/admin/categories", label: "Kategori", icon: Tags },
   { href: "/admin/menu", label: "Menu", icon: Utensils },
-  { href: "/admin/users", label: "Verifikasi Penjual", icon: Users },
+  { href: "/admin/users", label: "List Pengguna", icon: Users },
   { href: "/admin/balance", label: "Top-Up Saldo", icon: Wallet },
+  { href: "/admin/withdrawals", label: "Penarikan Saldo", icon: ArrowDownCircle },
   { href: "/admin/reports", label: "Laporan", icon: BarChart3 },
 ];
 

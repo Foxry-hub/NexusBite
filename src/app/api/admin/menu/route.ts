@@ -19,6 +19,12 @@ export async function GET() {
                         email: true,
                     },
                 },
+                category: {
+                    select: {
+                        id: true,
+                        name: true,
+                    },
+                },
             },
             orderBy: { createdAt: "desc" },
         });

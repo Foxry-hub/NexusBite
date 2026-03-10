@@ -19,7 +19,14 @@ import {
   DollarSign,
   CheckCircle,
   XCircle,
+  Tags,
 } from "lucide-react";
+
+interface Category {
+  id: string;
+  name: string;
+  description: string | null;
+}
 
 interface Menu {
   id: string;
@@ -28,6 +35,8 @@ interface Menu {
   price: number;
   image: string | null;
   status: "AVAILABLE" | "OUT_OF_STOCK";
+  categoryId: string | null;
+  category: Category | null;
 }
 
 function formatPrice(price: number) {
@@ -41,6 +50,7 @@ function formatPrice(price: number) {
 export default function MenuManagementPage() {
   const router = useRouter();
   const [menus, setMenus] = useState<Menu[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editingMenu, setEditingMenu] = useState<Menu | null>(null);
@@ -55,6 +65,7 @@ export default function MenuManagementPage() {
   const [formPrice, setFormPrice] = useState("");
   const [formImage, setFormImage] = useState("");
   const [formStatus, setFormStatus] = useState<"AVAILABLE" | "OUT_OF_STOCK">("AVAILABLE");
+  const [formCategoryId, setFormCategoryId] = useState<string>("");
 
   const fetchMenus = useCallback(async () => {
     try {
@@ -68,9 +79,22 @@ export default function MenuManagementPage() {
     }
   }, []);
 
+  const fetchCategories = useCallback(async () => {
+    try {
+      const res = await fetch("/api/categories");
+      if (res.ok) {
+        const data = await res.json();
+        setCategories(Array.isArray(data) ? data : []);
+      }
+    } catch {
+      console.error("Failed to fetch categories");
+    }
+  }, []);
+
   useEffect(() => {
     fetchMenus();
-  }, [fetchMenus]);
+    fetchCategories();
+  }, [fetchMenus, fetchCategories]);
 
   const resetForm = () => {
     setFormName("");
@@ -78,6 +102,7 @@ export default function MenuManagementPage() {
     setFormPrice("");
     setFormImage("");
     setFormStatus("AVAILABLE");
+    setFormCategoryId("");
     setEditingMenu(null);
     setError("");
   };
@@ -94,6 +119,7 @@ export default function MenuManagementPage() {
     setFormPrice(menu.price.toString());
     setFormImage(menu.image || "");
     setFormStatus(menu.status);
+    setFormCategoryId(menu.categoryId || "");
     setShowModal(true);
   };
 
@@ -115,6 +141,7 @@ export default function MenuManagementPage() {
         price: formPrice,
         image: formImage || null,
         status: formStatus,
+        categoryId: formCategoryId || null,
       };
 
       const res = editingMenu
@@ -344,6 +371,12 @@ export default function MenuManagementPage() {
                       {/* Content */}
                       <div className="p-5">
                         <h3 className="text-white font-semibold text-lg mb-1 truncate">{menu.name}</h3>
+                        {menu.category && (
+                          <span className="inline-flex items-center gap-1 text-xs text-orange-400 bg-orange-500/10 px-2 py-0.5 rounded-full mb-2">
+                            <Tags className="w-3 h-3" />
+                            {menu.category.name}
+                          </span>
+                        )}
                         <p className="text-neutral-400 text-sm line-clamp-2 mb-3">{menu.description}</p>
                         <p className="text-orange-400 font-bold text-xl">{formatPrice(menu.price)}</p>
                       </div>
@@ -431,6 +464,12 @@ export default function MenuManagementPage() {
                       {/* Content */}
                       <div className="p-5">
                         <h3 className="text-neutral-300 font-semibold text-lg mb-1 truncate">{menu.name}</h3>
+                        {menu.category && (
+                          <span className="inline-flex items-center gap-1 text-xs text-neutral-400 bg-neutral-700/30 px-2 py-0.5 rounded-full mb-2">
+                            <Tags className="w-3 h-3" />
+                            {menu.category.name}
+                          </span>
+                        )}
                         <p className="text-neutral-500 text-sm line-clamp-2 mb-3">{menu.description}</p>
                         <p className="text-neutral-400 font-bold text-xl">{formatPrice(menu.price)}</p>
                       </div>
@@ -590,6 +629,33 @@ export default function MenuManagementPage() {
                     className="w-full pl-12 pr-4 py-3 bg-neutral-800 border border-neutral-700 rounded-xl text-white placeholder-neutral-500 focus:outline-none focus:border-orange-500 transition-colors"
                   />
                 </div>
+              </div>
+
+              {/* Category */}
+              <div>
+                <label className="block text-sm font-medium text-neutral-300 mb-2">
+                  Kategori
+                </label>
+                <div className="relative">
+                  <Tags className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-neutral-500" />
+                  <select
+                    value={formCategoryId}
+                    onChange={(e) => setFormCategoryId(e.target.value)}
+                    className="w-full pl-12 pr-4 py-3 bg-neutral-800 border border-neutral-700 rounded-xl text-white focus:outline-none focus:border-orange-500 transition-colors appearance-none cursor-pointer"
+                  >
+                    <option value="">Pilih Kategori (Opsional)</option>
+                    {categories.map((category) => (
+                      <option key={category.id} value={category.id}>
+                        {category.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                {categories.length === 0 && (
+                  <p className="text-neutral-500 text-sm mt-2">
+                    Belum ada kategori. Hubungi admin untuk membuat kategori.
+                  </p>
+                )}
               </div>
 
               {/* Status */}
